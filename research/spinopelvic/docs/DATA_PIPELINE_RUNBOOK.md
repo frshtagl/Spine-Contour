@@ -151,7 +151,16 @@ These runs initialize from the original fork checkpoints. Do not chain one fine-
 
 ## 6. Normalize model predictions into separate model records
 
-Create empty base templates with reader_code MODEL using the same coded study/image metadata. Do not pass a human-reader annotation folder as the base: the normalizer deliberately clears human point/box/polygon fields and writes predictions into model_point, model_bbox and model_polygons.
+Create a separate coded CSV with reader_code MODEL for the same study/image metadata, then generate empty templates. Do not pass a human-reader annotation folder as the base:
+
+~~~bash
+python research/spinopelvic/tools/make_annotation_templates.py \
+  --images /secure/spinopelvic/images \
+  --metadata-csv /secure/spinopelvic/model_template_manifest.csv \
+  --out /secure/spinopelvic/annotations/MODEL
+~~~
+
+ the normalizer deliberately clears human point/box/polygon fields and writes predictions into model_point, model_bbox and model_polygons.
 
 The recovered HRNet and S1 predict.py scripts write predictions.json. The recovered vertebral U-Net predict.py writes one original-frame label mask per image. Example source-kit inference commands:
 
@@ -191,7 +200,7 @@ python research/spinopelvic/tools/normalize_model_predictions.py \
 
 Normalize a separate vertebral U-Net route by replacing --hrnet-predictions with --vertebra-mask-dir. Do not supply HRNet and vertebral U-Net together: both predict L1-L5 geometry and the normalizer intentionally rejects that combination. If HRNet and S1 predictions are both supplied, S1 detector points take precedence for S1; this precedence is recorded in the prediction manifest.
 
-The score thresholds above are placeholders only. Freeze them using development validation and the approved QC plan; HRNet raw heatmap peaks are not calibrated probabilities. The normalizer writes raw scores, accepted model points and rejected raw points into a secure prediction manifest. It never overwrites human-reviewed point/box/polygon fields in the base annotation files.
+The femoral mask directory must contain original-frame binary masks produced by the approved local femoral inference path; this branch does not add a separate femoral prediction CLI. The component-manifest JSON should record the exact checkpoint SHA-256 values used for this run. The score thresholds above are placeholders only. Freeze them using development validation and the approved QC plan; HRNet raw heatmap peaks are not calibrated probabilities. The normalizer writes raw scores, accepted model points and rejected raw points into a secure prediction manifest. It never overwrites human-reviewed point/box/polygon fields in the base annotation files.
 
 Validate the normalized prediction records:
 
@@ -202,11 +211,11 @@ python research/spinopelvic/tools/validate_annotations.py /secure/spinopelvic/pr
 ## 7. Geometry and agreement analysis
 
 
-Compute source-compatible geometry from a selected reader's annotation records:
+Compute source-compatible geometry from the normalized model prediction records (use /annotations/R1 and --reader-code R1 for human-reader geometry):
 
 ~~~
 python research/spinopelvic/tools/compute_measurements_from_annotations.py \
-  --annotations /secure/spinopelvic/annotations/R1 \
+  --annotations /secure/spinopelvic/predictions/normalized_hrnet \
   --reader-code MODEL \
   --min-model-score 0.0 \
   --out /secure/spinopelvic/measurements/model_source_geometry.csv
