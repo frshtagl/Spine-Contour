@@ -5,8 +5,8 @@
 ## 1. Image and patient unit
 
 - One coded standing lateral lumbopelvic examination per patient wherever possible.
-- Store SHA-256 of the exact image pixel data, width, height, orientation and pixel spacing when available.
-- Coordinates use original stored-image pixels: origin top-left, x rightward, y downward.
+- Store SHA-256 of the exact original image file bytes, width, height, orientation and pixel spacing when available. This matches the parent app's bundle-io.js sha256File implementation; do not hash decoded pixels or a re-encoded export.
+- Coordinates use original decoded-image pixels: origin top-left, x rightward, y downward. For single-frame grayscale DICOM, match backend/server.py decoding: apply RescaleSlope/RescaleIntercept and MONOCHROME1 inversion; the annotation hash remains over the original DICOM file bytes.
 - Store anatomical anterior-side mapping explicitly; do not infer A/P from screen position alone.
 - Direct identifiers and the re-identification key must remain outside the research annotation dataset.
 
