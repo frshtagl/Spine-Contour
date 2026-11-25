@@ -15,6 +15,7 @@ PRESENT = [
     "research/spinopelvic/SYNOPSIS_AMENDMENT_RECOMMENDATIONS.md",
     "research/spinopelvic/configs/project.yaml",
     "research/spinopelvic/configs/experiment_template.yaml",
+    "research/spinopelvic/configs/checkpoint_manifest.example.json",
     "research/spinopelvic/schemas/annotation.schema.json",
     "research/spinopelvic/schemas/annotation.example.json",
     "research/spinopelvic/schemas/split_manifest.schema.json",
@@ -33,6 +34,7 @@ PRESENT = [
     "research/spinopelvic/tools/export_custom_checkpoint.py",
     "research/spinopelvic/tools/normalize_model_predictions.py",
     "research/spinopelvic/tools/validate_end_to_end_framing.py",
+    "research/spinopelvic/tools/validate_synthetic_s1_search.py",
     "research/spinopelvic/tools/import_source_bundle.sh",
     "research/spinopelvic/tools/inspect_checkpoints.py",
     "research/spinopelvic/analysis/analyze_agreement.py",
@@ -54,7 +56,7 @@ PENDING = [
     "research/spinopelvic/recovered_kits/source_bundle/contents/vertebra_unet_finetune/train.py",
     "research/spinopelvic/recovered_kits/source_bundle/contents/hrnet_landmarks_finetune/train.py",
     "research/spinopelvic/recovered_kits/source_bundle/contents/s1_finetune/train.py",
-    "research/spinopelvic/tools/validate_predicted_s1_framing.py",
+    "research/spinopelvic/tools/validate_actual_s1_framing.py",
 ]
 OPTIONAL = [
     "research/spinopelvic/colab/spinopelvic_training.ipynb",
