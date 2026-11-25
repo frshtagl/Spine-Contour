@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "spinecontour-spinopelvic.splits/1",
+  "title": "Patient-disjoint spinopelvic cohort split manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "seed", "counts", "patient_group_counts", "study_ids", "assignment_sha256", "input_manifest_sha256", "locked_test_access", "note"],
+  "properties": {
+    "schema_version": {"const": "spinecontour-spinopelvic.splits/1"},
+    "seed": {"type": "integer"},
+    "counts": {"$ref": "#/$defs/counts"},
+    "patient_group_counts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["train", "validation", "locked_test"],
+      "properties": {
+        "train": {"type": "integer", "minimum": 1},
+        "validation": {"type": "integer", "minimum": 1},
+        "locked_test": {"type": "integer", "minimum": 1}
+      }
+    },
+    "study_ids": {
+      "type": "object", "additionalProperties": false,
+      "required": ["train", "validation", "locked_test"],
+      "properties": {
+        "train": {"$ref": "#/$defs/idList"},
+        "validation": {"$ref": "#/$defs/idList"},
+        "locked_test": {"$ref": "#/$defs/idList"}
+      }
+    },
+    "assignment_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "input_manifest_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "locked_test_access": {"const": "reference_only; do not use for training, model selection, thresholding or iterative debugging"},
+    "note": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "idList": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "counts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["train", "validation", "locked_test", "total"],
+      "properties": {
+        "train": {"type": "integer", "minimum": 1},
+        "validation": {"type": "integer", "minimum": 1},
+        "locked_test": {"type": "integer", "minimum": 1},
+        "total": {"type": "integer", "minimum": 3}
+      }
+    }
+  }
+}
