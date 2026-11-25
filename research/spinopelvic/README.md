@@ -106,3 +106,12 @@ The synopsis requires site-specific approval for cross-institutional transfer an
 - No training, test evaluation or accuracy claim has been made.
 
 Next: approve the synopsis/SOP, retrieve and inspect the actual LFS checkpoints, validate the annotations on a small approved pilot, and implement the deterministic dataset builder.
+
+
+## Repository branch and audit note
+
+The spinopelvic workspace is on the separate branch research/spinopelvic-lab, not on main. Open the [research folder on that branch](https://github.com/frshtagl/Spine-Contour/tree/research/spinopelvic-lab/research/spinopelvic).
+
+The exact source-derived editor method is recorded in docs/ANNOTATION_STRATEGY_EXACT.md. The repository state and missing implementation components are recorded in docs/REPOSITORY_CROSS_CHECK_2026-11-25.md.
+
+Run python research/spinopelvic/tools/audit_research_branch.py from a clone to check expected files and Git LFS checkpoint status. The research branch remains a scaffold until the missing split, dataset, training, evaluation, export and end-to-end framing components are implemented and tested.

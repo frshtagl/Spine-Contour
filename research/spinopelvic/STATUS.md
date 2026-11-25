@@ -32,3 +32,13 @@ The public repository includes the lumbar model architectures/checkpoints and in
 4. Download LFS checkpoints locally and verify checkpoint metadata/tensor shapes.
 5. Validate schema and coordinate transforms on synthetic cases and an approved pilot.
 6. Implement dataset builder, trainers, evaluation and ONNX export.
+
+
+## 2026-11-25 — repository cross-check
+
+- Verified personal fork frshtagl/Spine-Contour and branch research/spinopelvic-lab.
+- Branch head at audit: dd9e2c2; 10 commits ahead of main; 17 tracked research files. The research branch is not empty; it is separate from main.
+- Added the exact source-derived application annotation strategy and a dated repository gap audit.
+- Added tools/audit_research_branch.py to check research-file presence, missing pipeline components and Git LFS pointer status without opening patient data.
+- Confirmed the branch is still a scaffold: patient split generation, dataset construction, model training loops, evaluation, custom ONNX export and executable Colab workflow were absent at the audited head.
+- No patient data were accessed; no checkpoint tensor was strict-loaded; no model was trained; no clinical result is claimed.
