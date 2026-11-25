@@ -34,7 +34,7 @@ Separately annotate two expert femoral-head centres as reference geometry. If tw
 ## 3. S1 detector target
 
 For the two-keypoint Keypoint R-CNN, record:
-- S1 detection bounding box
+- Raw S1 detector bounding box in model_bbox; reviewed/accepted bounding box in bbox
 - S1 superior-endplate anterior endpoint (SA)
 - S1 superior-endplate posterior endpoint (SP)
 
@@ -61,7 +61,7 @@ Use these states for every mask/keypoint object:
 - `not_placed`: structure is visible but has not been annotated; ignore, not negative.
 - `not_visible`: annotator explicitly checked and confirmed the structure is absent/out of view; negative label where appropriate.
 
-Never treat `not_placed` as `not_visible`. Uncertainty should be separately flagged. The state/provenance logic follows the Spine-Contour level-editor documentation, while the polygon masks are stored in the research-specific schema.
+Never treat `not_placed` as `not_visible`. Uncertainty should be separately flagged. Keep raw model output in model_point, model_polygons and model_bbox; keep the reviewed/corrected annotation in point, polygons and bbox. Preserve the raw model_score, noting that HRNet heatmap peaks are not calibrated probabilities. The state/provenance logic follows the Spine-Contour level-editor documentation, while the polygon masks are stored in the research-specific schema.
 
 ## 6. Reader reference values
 
