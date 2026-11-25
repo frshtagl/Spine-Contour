@@ -26,5 +26,11 @@ jobs:
           cache-dependency-path: research/spinopelvic/requirements-research-test.txt
       - name: Install lightweight test dependencies
         run: python -m pip install -r research/spinopelvic/requirements-research-test.txt
+      - name: Compile research Python modules
+        run: python -m compileall -q research/spinopelvic/tools research/spinopelvic/analysis
+      - name: Validate committed JSON and shell scripts
+        run: |
+          find research/spinopelvic -type f -name '*.json' -print0 | xargs -0 -r -n1 python -m json.tool >/dev/null
+          bash -n research/spinopelvic/tools/import_source_bundle.sh
       - name: Run synthetic tests only
         run: python -m unittest discover -s research/spinopelvic/tests -v
