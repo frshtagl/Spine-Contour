@@ -180,6 +180,19 @@ def _write_json(path: Path, value: Any) -> None:
     path.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
 
 
+def output_file_manifest(root: Path) -> list[dict[str, Any]]:
+    """Hash every generated dataset file; keep this case-level manifest in secure storage."""
+    rows = []
+    for path in sorted(root.rglob("*")):
+        if path.is_file() and path.name != "dataset_build_manifest.json":
+            rows.append({
+                "path": path.relative_to(root).as_posix(),
+                "bytes": path.stat().st_size,
+                "sha256": sha256_file(path),
+            })
+    return rows
+
+
 def _ensure_outside_repo(path: Path, repo_root: Path) -> None:
     resolved, root = path.expanduser().resolve(), repo_root.resolve()
     try:
@@ -351,6 +364,10 @@ def main() -> int:
         args.out.mkdir(parents=True, exist_ok=True)
         report = build(records, image_index, splits, args.reader_code, args.out, args.include_test_reference)
         report["split_manifest_sha256"] = sha256_file(args.splits)
+        report["output_files"] = output_file_manifest(args.out)
+        report["output_manifest_sha256"] = hashlib.sha256(
+            json.dumps(report["output_files"], sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
         _write_json(args.out / "dataset_build_manifest.json", report)
     except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
