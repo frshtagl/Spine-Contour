@@ -80,7 +80,7 @@ The public repository includes the lumbar model architectures/checkpoints and in
 1. Import the source-only recovered-kit archive locally with tools/import_source_bundle.sh (no weights are imported).
 2. Run the branch CI and the synthetic tests on the user's local clone.
 3. Strict-load the actual local baseline and recovered HRNet/S1 checkpoints; compare model state keys/shapes and resolve any incompatibility before training.
-4. Run tools/validate_end_to_end_framing.py and tools/validate_synthetic_s1_search.py locally with the parent backend dependencies; then add an actual trained-S1-detector-to-crop integration test and exercise the normalizer against the recovered source-kit prediction files.
+4. Run tools/validate_end_to_end_framing.py and tools/validate_synthetic_s1_search.py locally with the parent backend dependencies; import the source-only kit after provenance review; then add an actual trained-S1-detector-to-crop integration test and exercise the cropper/normalizer/femoral predictor on a synthetic end-to-end fixture.
 5. Freeze the approved protocol, reader/adjudication plan and seed; generate the real patient-disjoint split in secure storage.
 6. Run a small approved pilot, then development-only training/selection. Open the locked test only once after all thresholds, QC and analysis are frozen.
 7. Colab orchestration remains optional and must not be used unless the institution/site explicitly approves the proposed de-identified data transfer and processing.
