@@ -202,7 +202,56 @@
             "null"
           ]
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "segmented",
+                  "edited",
+                  "manual"
+                ]
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "bbox": {
+                "type": "array",
+                "minItems": 4,
+                "maxItems": 4
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "not_placed",
+                  "not_visible"
+                ]
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "bbox": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
     },
     "landmarks": {
       "type": "object",
@@ -417,6 +466,26 @@
               }
             }
           }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "edited"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "model_polygons": {
+                "type": "array",
+                "minItems": 1
+              }
+            }
+          }
         }
       ]
     },
@@ -447,6 +516,16 @@
             "clear",
             "uncertain",
             "not_assessable"
+          ]
+        },
+        "model_point": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/point"
+            },
+            {
+              "type": "null"
+            }
           ]
         }
       },
@@ -492,6 +571,25 @@
             "properties": {
               "point": {
                 "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "edited"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "model_point": {
+                "$ref": "#/$defs/point"
               }
             }
           }
