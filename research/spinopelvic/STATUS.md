@@ -16,15 +16,15 @@
 
 The public repository includes the lumbar model architectures/checkpoints and inference/export implementation, but not the original lumbar training data or complete lumbar training loop/optimization recipe. Our local fine-tuning recipe must be documented as this study's method, not described as exact replication of the original hidden training experiment.
 
-## Not done
+## Not done (initial scaffold baseline; superseded by the later continuation entry)
 
-- No patient images or annotations received.
+- No study patient images or annotations were uploaded to this chat/repository at the initial scaffold stage.
 - No actual Git LFS checkpoint tensors inspected in this environment.
-- No dataset builder/training loop/Colab notebook implemented.
+- At that initial stage, no dataset builder/training loop/Colab notebook was implemented.
 - No fine-tuning or test evaluation performed.
 - No performance or clinical validation claim made.
 
-## Next actions
+## Next actions (initial scaffold baseline; superseded by the later continuation entry)
 
 1. Approve the synopsis changes and annotation SOP with supervisor/readers/statistician.
 2. Confirm 240/60/100 or revise the allocation.
