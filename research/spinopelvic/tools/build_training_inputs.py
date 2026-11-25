@@ -94,7 +94,7 @@ def copy_training_image(source: Path, destination: Path) -> str:
     if source.suffix.lower() in {".dcm", ".dicom"}:
         arr = dicom_pixels(source).astype(np.float32)
         destination = destination.with_suffix(".tiff")
-        Image.fromarray(arr, mode="F").save(destination, format="TIFF")
+        Image.fromarray(arr).save(destination, format="TIFF")
         return destination.name
     shutil.copy2(source, destination)
     return destination.name
@@ -306,7 +306,7 @@ def build(records: list[dict[str, Any]], image_index: dict[str, Path], splits: d
                 dst = dirs["vertebra_images"] / file_name
                 if not dst.exists():
                     copy_training_image(source, dst)
-                Image.fromarray(vmask, mode="L").save(dirs["vertebra_masks"] / f"{Path(file_name).stem}.png")
+                Image.fromarray(vmask).save(dirs["vertebra_masks"] / f"{Path(file_name).stem}.png")
                 task_counts["vertebra"] += 1
                 if split == "validation":
                     val_vertebra_names.append(file_name)
@@ -318,7 +318,7 @@ def build(records: list[dict[str, Any]], image_index: dict[str, Path], splits: d
                 dst = dirs["femoral_images"] / file_name
                 if not dst.exists():
                     copy_training_image(source, dst)
-                Image.fromarray(fmask, mode="L").save(dirs["femoral_masks"] / f"{Path(file_name).stem}.png")
+                Image.fromarray(fmask).save(dirs["femoral_masks"] / f"{Path(file_name).stem}.png")
                 task_counts["femoral"] += 1
                 if split == "validation":
                     val_femoral_names.append(file_name)
