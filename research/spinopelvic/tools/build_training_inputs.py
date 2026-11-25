@@ -252,7 +252,7 @@ def build(records: list[dict[str, Any]], image_index: dict[str, Path], splits: d
         }
         for path in dirs.values():
             path.mkdir(parents=True, exist_ok=True)
-        hrnet_items, s1_items = [], []
+        hrnet_items, s1_items, reference_geometry_items = [], [], []
         val_vertebra_names, val_femoral_names = [], []
         task_counts = Counter()
         skipped = Counter()
@@ -277,6 +277,19 @@ def build(records: list[dict[str, Any]], image_index: dict[str, Path], splits: d
             if not s1_dst.exists():
                 copy_training_image(source, s1_dst)
             hrnet_item, s1_item = make_model_item(rec, file_name)
+            fh1, fh2 = point_for(rec, "FH1_CENTER"), point_for(rec, "FH2_CENTER")
+            reference_geometry_items.append({
+                "study_id": sid,
+                "patient_group_code": rec["annotation"]["patient_group_code"],
+                "reader_code": rec["annotation"]["reader_code"],
+                "stage": rec["annotation"]["stage"],
+                "file": file_name,
+                "image_sha256": digest,
+                "femoral_centres": {"FH1_CENTER": fh1, "FH2_CENTER": fh2},
+                "femoral_centres_complete": fh1 is not None and fh2 is not None,
+            })
+            if fh1 is not None and fh2 is not None:
+                task_counts["femoral_reference_centres"] += 1
             if any(value is not None for value in hrnet_item["landmarks"].values()):
                 hrnet_items.append(hrnet_item)
                 task_counts["hrnet"] += 1
@@ -314,6 +327,7 @@ def build(records: list[dict[str, Any]], image_index: dict[str, Path], splits: d
 
         _write_json(base / "hrnet" / f"annotations_{split}.json", {"images": hrnet_items})
         _write_json(base / "s1" / f"annotations_{split}.json", {"images": s1_items})
+        _write_json(base / "geometry" / f"reference_geometry_{split}.json", {"studies": reference_geometry_items})
         if split == "validation":
             (output / "vertebra" / "val_names.txt").write_text("\n".join(sorted(val_vertebra_names)) + "\n", encoding="utf-8")
             (output / "femoral" / "val_names.txt").write_text("\n".join(sorted(val_femoral_names)) + "\n", encoding="utf-8")
@@ -325,7 +339,7 @@ def build(records: list[dict[str, Any]], image_index: dict[str, Path], splits: d
         "Raster images are copied byte-for-byte. Single-frame grayscale DICOM is decoded with the parent app's slope/intercept and MONOCHROME1 inversion, then saved as float TIFF for the PIL-based training kits; the annotation hash still verifies the original DICOM bytes.",
         "U-Net examples with any L1-L5 status not_placed are excluded rather than mislabeled as background.",
         "Explicit not_visible masks are treated as negative/background; not_placed is never treated as negative.",
-        "HRNet uses the source kit's 22 landmark channels. FH1/FH2 centres are not HRNet channels.",
+        "HRNet uses the source kit's 22 landmark channels. FH1/FH2 centres are retained separately in geometry/reference_geometry_<split>.json and are not HRNet channels.",
         "S1 Keypoint R-CNN examples require a positive S1 box and both S1 endpoints.",
         "The recovered S1 kit derives its training box from keypoints plus its configured padding; the provided annotated bbox is retained in JSON for audit but its current KpDataset does not consume it.",
         "The locked test set is excluded unless --include-test-reference is explicitly supplied; test_reference outputs are written under a physically separate folder and must never be passed to a training command.",
