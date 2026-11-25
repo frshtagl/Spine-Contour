@@ -123,6 +123,7 @@ def soft_dice_loss(logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
 def validate(model, loader, device: str, tta_flip: bool) -> dict:
     model.eval()
     dices, ious = [], []
+    n_empty_reference = n_empty_correct = 0
     for x, y in loader:
         x = x.to(device)
         logits = model(x)
@@ -130,11 +131,23 @@ def validate(model, loader, device: str, tta_flip: bool) -> dict:
         if tta_flip:
             flipped = torch.sigmoid(model(x.flip(-1))).flip(-1)
             probability = (probability + flipped) / 2.0
+        truth = y[0, 0].numpy() > 0.5
+        prediction = probability[0, 0].cpu().numpy() >= THRESHOLD
+        if not truth.any():
+            n_empty_reference += 1
+            n_empty_correct += int(not prediction.any())
+            continue
         d, j = dice_iou(probability[0, 0].cpu().numpy(), y[0, 0].numpy())
         dices.append(d)
         ious.append(j)
-    return {"n": len(dices), "dice": float(np.mean(dices)) if dices else None,
-            "iou": float(np.mean(ious)) if ious else None}
+    return {
+        "n": len(dices) + n_empty_reference,
+        "n_positive_reference": len(dices),
+        "n_empty_reference": n_empty_reference,
+        "positive_dice": float(np.mean(dices)) if dices else None,
+        "positive_iou": float(np.mean(ious)) if ious else None,
+        "empty_reference_specificity": n_empty_correct / n_empty_reference if n_empty_reference else None,
+    }
 
 
 def main() -> int:
@@ -231,14 +244,14 @@ def main() -> int:
                        "weight_decay": args.weight_decay, "dice_weight": args.dice_weight,
                        "preprocessing": "robust_rescale+CLAHE2x8x8+letterbox768+resize640+gray_norm"}}
             torch.save(payload, args.out / "last.pt")
-            if metrics["dice"] is not None and metrics["dice"] > best:
-                best = metrics["dice"]
+            if metrics["positive_dice"] is not None and metrics["positive_dice"] > best:
+                best = metrics["positive_dice"]
                 torch.save(payload, args.out / "best.pt")
             (args.out / "training_log.json").write_text(json.dumps(log, indent=2) + "\n", encoding="utf-8")
             print(json.dumps(record), flush=True)
             if args.max_steps and step >= args.max_steps:
                 break
-        print(json.dumps({"baseline": baseline, "best_validation_dice": best, "output": str(args.out)}, indent=2))
+        print(json.dumps({"baseline": baseline, "best_validation_positive_dice": best, "output": str(args.out)}, indent=2))
     except Exception as exc:
         print(f"ERROR: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 2
