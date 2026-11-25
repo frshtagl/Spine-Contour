@@ -1,0 +1,17 @@
+{
+  "schema_version": "spinecontour-spinopelvic.reference-measurements/1",
+  "study_id": "SYNTHETIC_STUDY_001",
+  "patient_group_code": "SYNTHETIC_GROUP_001",
+  "image_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "reader_code": "R1",
+  "protocol_version": "draft-0.2",
+  "stage": "pilot",
+  "adjudicated": false,
+  "measurements": {
+    "PI": {"status": "measured", "value_deg": 52.0, "reason": null},
+    "PT": {"status": "measured", "value_deg": 18.0, "reason": null},
+    "SS": {"status": "measured", "value_deg": 34.0, "reason": null},
+    "LL_L1_S1": {"status": "not_assessable", "value_deg": null, "reason": "L1 superior endplate is not fully visible"}
+  },
+  "comment": "Synthetic schema example; not a clinical case."
+}
