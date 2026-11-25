@@ -118,7 +118,16 @@ python research/spinopelvic/tools/build_training_inputs.py \
   --include-test-reference
 ~~~
 
-The locked-test output is written under a separate test_reference folder. Never pass it to a training command.
+The locked-test output is written under a separate test_reference folder. Never pass it to a training command. After model selection is frozen, create its separate source-frame manifest:
+
+~~~bash
+python research/spinopelvic/tools/make_source_frames.py \
+  --dataset /secure/spinopelvic/model_inputs_test_reference \
+  --out /secure/spinopelvic/framed_model_inputs_test_reference \
+  --include-test-reference
+~~~
+
+Use the resulting test-only frame manifest for locked-test prediction normalization; do not mix it with development/validation outputs.
 
 Before using model predictions, run the synthetic framing checks with the parent backend dependencies installed:
 
