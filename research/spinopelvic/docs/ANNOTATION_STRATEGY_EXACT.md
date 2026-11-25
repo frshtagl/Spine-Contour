@@ -138,3 +138,8 @@ This is a source-derived extraction, not a claim that the research-specific pixe
 The initial draft in this document described the image SHA-256 as a hash of stored grey pixels. That wording was incorrect. The application bundle export/import code calls sha256File on the original file and hashes its raw bytes. The research schema and template generator now follow that exact behavior.
 
 For DICOM, the parent backend decodes a single grayscale pixel array, applies RescaleSlope and RescaleIntercept, and inverts MONOCHROME1. The research template and dataset tools mirror this decoding path. The DICOM file hash remains over the original file bytes; model-input TIFFs are derived copies and do not replace the source fingerprint.
+
+
+## S1 box provenance
+
+The annotation schema now separates the raw detector box (model_bbox) from the reviewed/accepted box (bbox). A model-only prediction can remain in model_bbox while the human bbox is null; an edited box preserves the original model_bbox for audit.
