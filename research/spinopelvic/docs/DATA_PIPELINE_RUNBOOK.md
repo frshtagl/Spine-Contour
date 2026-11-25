@@ -92,11 +92,19 @@ The builder creates:
 - femoral/images + femoral/masks + femoral/val_names.txt
 - hrnet/images + train/validation 22-landmark JSON files
 - s1/images + train/validation S1 keypoint JSON files
-- geometry/reference_geometry_train.json and geometry/reference_geometry_validation.json, preserving the two expert femoral centres separately from HRNet's 22 channels
+- geometry/reference_geometry_train.json and geometry/reference_geometry_validation.json, preserving the two expert femoral centres and S1 superior-endplate anchors separately from HRNet's 22 channels
 
 It verifies source-file hashes and image dimensions. Raster images are copied byte-for-byte. Single-frame grayscale DICOM is decoded with the parent app's slope/intercept and MONOCHROME1 inversion, then saved as float TIFF for the PIL-based training kits; the annotation hash still verifies the original DICOM bytes.
 
-It excludes U-Net examples with any L1–L5 status still not_placed; explicit not_visible is treated as background. The locked test set is excluded by default. The builder refuses to merge into a non-empty output directory and records a per-file output SHA-256 manifest plus an aggregate dataset fingerprint. It preserves original-image coordinates; end-to-end S1-relative crop/inverse-coordinate validation remains a separate pending test.
+It excludes U-Net examples with any L1–L5 status still not_placed; explicit not_visible is treated as background. The locked test set is excluded by default. The builder refuses to merge into a non-empty output directory and records a per-file output SHA-256 manifest plus an aggregate dataset fingerprint. It preserves original-image coordinates. The next step applies the parent app's exact S1 framing functions to create crop-frame inputs for U-Net, HRNet and femoral models; S1 detector training remains on unframed images because it is used to localize candidate windows at inference.
+
+~~~bash
+python research/spinopelvic/tools/make_source_frames.py \
+  --dataset /secure/spinopelvic/model_inputs \
+  --out /secure/spinopelvic/framed_model_inputs
+~~~
+
+The cropper calls backend.framing.reframe/fallback_window, saves raw crops (the model scripts then apply their own matching letterbox/preprocessing), rebases HRNet points into crop coordinates, crops vertebral/femoral masks and writes frame_manifest_all.json. This manifest is required to restore cropped predictions to original radiograph coordinates.
 
 Only after the statistical analysis plan and model choices are frozen should the test references be prepared separately:
 
@@ -127,16 +135,16 @@ The source-only bundle contains the recovered U-Net, HRNet and S1 training scrip
 
 ~~~
 python research/spinopelvic/recovered_kits/source_bundle/contents/vertebra_unet_finetune/train.py \
-  --img_dir /secure/spinopelvic/model_inputs/vertebra/images \
-  --mask_dir /secure/spinopelvic/model_inputs/vertebra/masks \
-  --val_names /secure/spinopelvic/model_inputs/vertebra/val_names.txt \
+  --img_dir /secure/spinopelvic/framed_model_inputs/vertebra/images \
+  --mask_dir /secure/spinopelvic/framed_model_inputs/vertebra/masks \
+  --val_names /secure/spinopelvic/framed_model_inputs/vertebra/val_names.txt \
   --ckpt backend/weights/vertebra_unet.pt \
   --out /secure/spinopelvic/runs/vertebra_unet
 
 python research/spinopelvic/recovered_kits/source_bundle/contents/hrnet_landmarks_finetune/train.py \
-  --ann /secure/spinopelvic/model_inputs/hrnet/annotations_train.json \
-  --val_ann /secure/spinopelvic/model_inputs/hrnet/annotations_validation.json \
-  --img_dir /secure/spinopelvic/model_inputs/hrnet/images \
+  --ann /secure/spinopelvic/framed_model_inputs/hrnet/annotations_train.json \
+  --val_ann /secure/spinopelvic/framed_model_inputs/hrnet/annotations_validation.json \
+  --img_dir /secure/spinopelvic/framed_model_inputs/hrnet/images \
   --ckpt backend/weights/hrnet_landmarks.pt \
   --out /secure/spinopelvic/runs/hrnet
 
@@ -148,9 +156,9 @@ python research/spinopelvic/recovered_kits/source_bundle/contents/s1_finetune/tr
   --out /secure/spinopelvic/runs/s1
 
 python research/spinopelvic/tools/train_femoral_unet.py \
-  --images /secure/spinopelvic/model_inputs/femoral/images \
-  --masks /secure/spinopelvic/model_inputs/femoral/masks \
-  --val-names /secure/spinopelvic/model_inputs/femoral/val_names.txt \
+  --images /secure/spinopelvic/framed_model_inputs/femoral/images \
+  --masks /secure/spinopelvic/framed_model_inputs/femoral/masks \
+  --val-names /secure/spinopelvic/framed_model_inputs/femoral/val_names.txt \
   --checkpoint backend/weights/femoral_unet.pt \
   --out /secure/spinopelvic/runs/femoral \
   --seed 2026
@@ -171,11 +179,11 @@ python research/spinopelvic/tools/make_annotation_templates.py \
 
  the normalizer deliberately clears human point/box/polygon fields and writes predictions into model_point, model_bbox and model_polygons.
 
-The recovered HRNet and S1 predict.py scripts write predictions.json. The recovered vertebral U-Net predict.py writes one original-frame label mask per image. Example source-kit inference commands:
+The recovered HRNet and S1 predict.py scripts write predictions.json. The recovered vertebral U-Net predict.py writes one crop-frame label mask per image. HRNet/U-Net/femoral inference uses framed_model_inputs; S1 detector inference uses the original unframed model_inputs/s1 images. Example source-kit inference commands:
 
 ~~~bash
 python research/spinopelvic/recovered_kits/source_bundle/contents/hrnet_landmarks_finetune/predict.py \
-  --img_dir /secure/spinopelvic/model_inputs/hrnet/images \
+  --img_dir /secure/spinopelvic/framed_model_inputs/hrnet/images \
   --ckpt /secure/spinopelvic/runs/hrnet/best.pt \
   --out /secure/spinopelvic/predictions/hrnet
 
@@ -185,9 +193,18 @@ python research/spinopelvic/recovered_kits/source_bundle/contents/s1_finetune/pr
   --out /secure/spinopelvic/predictions/s1
 
 python research/spinopelvic/recovered_kits/source_bundle/contents/vertebra_unet_finetune/predict.py \
-  --img_dir /secure/spinopelvic/model_inputs/vertebra/images \
+  --img_dir /secure/spinopelvic/framed_model_inputs/vertebra/images \
   --ckpt /secure/spinopelvic/runs/vertebra_unet/best.pt \
   --out /secure/spinopelvic/predictions/vertebra
+~~~
+
+Generate femoral crop-frame masks for all framed images (not just the labelled training subset):
+
+~~~bash
+python research/spinopelvic/tools/predict_femoral_unet.py \
+  --images /secure/spinopelvic/framed_model_inputs/hrnet/images \
+  --checkpoint /secure/spinopelvic/runs/femoral/best.pt \
+  --out /secure/spinopelvic/predictions/femoral
 ~~~
 
 Normalize an HRNet route (S1 detector and femoral masks may be added as shared downstream components):
@@ -199,6 +216,7 @@ python research/spinopelvic/tools/normalize_model_predictions.py \
   --hrnet-predictions /secure/spinopelvic/predictions/hrnet/predictions.json \
   --s1-predictions /secure/spinopelvic/predictions/s1/predictions.json \
   --femoral-mask-dir /secure/spinopelvic/predictions/femoral/masks \
+  --frame-manifest /secure/spinopelvic/framed_model_inputs/frame_manifest_all.json \
   --model-name HRNet-S1-Femoral \
   --model-version experiment-01 \
   --component-manifest /secure/spinopelvic/checkpoint_hashes.json \
@@ -209,7 +227,7 @@ python research/spinopelvic/tools/normalize_model_predictions.py \
 
 Normalize a separate vertebral U-Net route by replacing --hrnet-predictions with --vertebra-mask-dir. Do not supply HRNet and vertebral U-Net together: both predict L1-L5 geometry and the normalizer intentionally rejects that combination. If HRNet and S1 predictions are both supplied, S1 detector points take precedence for S1; this precedence is recorded in the prediction manifest.
 
-The femoral mask directory must contain original-frame binary masks produced by the approved local femoral inference path; this branch does not add a separate femoral prediction CLI. The component-manifest JSON should record the exact checkpoint SHA-256 values used for this run. The score thresholds above are placeholders only. Freeze them using development validation and the approved QC plan; HRNet raw heatmap peaks are not calibrated probabilities. The normalizer writes raw scores, accepted model points and rejected raw points into a secure prediction manifest. It never overwrites human-reviewed point/box/polygon fields in the base annotation files.
+The femoral mask directory contains S1 crop-frame masks from predict_femoral_unet.py; the normalizer restores them to original radiograph coordinates using frame_manifest_all.json. The same manifest restores HRNet points and U-Net masks. The component-manifest JSON should record the exact checkpoint SHA-256 values used for this run. The score thresholds above are placeholders only. Freeze them using development validation and the approved QC plan; HRNet raw heatmap peaks are not calibrated probabilities. The normalizer writes raw scores, accepted model points and rejected raw points into a secure prediction manifest. It never overwrites human-reviewed point/box/polygon fields in the base annotation files.
 
 Validate the normalized prediction records:
 
