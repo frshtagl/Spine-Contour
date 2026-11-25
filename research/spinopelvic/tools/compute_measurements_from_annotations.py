@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import sys
 from pathlib import Path
 from typing import Any
@@ -64,6 +65,8 @@ def main() -> int:
     parser.add_argument("--allow-in-repo", action="store_true", help="Only for synthetic tests; never use with real data")
     args = parser.parse_args()
     try:
+        if not math.isfinite(args.min_model_score) or args.min_model_score < 0:
+            raise ValueError("--min-model-score must be finite and non-negative")
         if not args.allow_in_repo:
             root = Path(__file__).resolve().parents[3].resolve()
             out = args.out.expanduser().resolve()
