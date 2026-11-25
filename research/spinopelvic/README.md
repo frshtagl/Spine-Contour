@@ -1,6 +1,6 @@
 # Spine-Contour Spinopelvic Research Workspace
 
-**Status:** research scaffold and synopsis amendment prepared; no patient data or model training runs have been added.
+**Status:** reproducible research utilities and synthetic CI tests added; no study-cohort data, training runs or clinical results are stored in this repository.
 
 This isolated workspace adapts the available Spine-Contour lumbar/lumbopelvic architecture and workflow for the UHS spinopelvic research study. The application on `main` remains unchanged.
 
@@ -87,7 +87,7 @@ Available checkpoints are in the repository's Git LFS paths:
 - `backend/weights/s1_keypointrcnn.pt`
 - `backend/weights/femoral_unet.pt`
 
-The public repository includes architecture builders and ONNX export code, but not the original lumbar training dataset or a complete lumbar training loop/recipe. We will therefore fine-tune compatible checkpoints using a newly documented local protocol, not claim exact reproduction of undisclosed original training hyperparameters.
+The parent source includes architecture builders and inference/export code, but not the original lumbar training dataset or complete original training recipe. Separate user-supplied recovered fine-tuning kits provide U-Net, HRNet and S1 training scripts; their source-only archive remains in the user's Library/local storage and can be imported with tools/import_source_bundle.sh. This branch adds the missing cohort split, dataset preparation, femoral fine-tuning, geometry/agreement analysis and custom ONNX export utilities. These are research implementations, not claims to reproduce undisclosed original hyperparameters. No trained weights are duplicated or re-uploaded.
 
 Each experiment starts from the original checkpoint, not a chain of previously fine-tuned checkpoints. Keep the unchanged source checkpoint as a baseline and maintain a frozen development benchmark to detect regression/catastrophic forgetting.
 
@@ -114,8 +114,23 @@ The spinopelvic workspace is on the separate branch research/spinopelvic-lab, no
 
 The exact source-derived editor method is recorded in docs/ANNOTATION_STRATEGY_EXACT.md. The repository state and missing implementation components are recorded in docs/REPOSITORY_CROSS_CHECK_2026-11-25.md.
 
-Run python research/spinopelvic/tools/audit_research_branch.py from a clone to check expected files and Git LFS checkpoint status. The research branch remains a scaffold until the missing split, dataset, training, evaluation, export and end-to-end framing components are implemented and tested.
+Run python research/spinopelvic/tools/audit_research_branch.py from a clone to check expected files and Git LFS pointer status. The core data-preparation and agreement utilities are now present; Colab orchestration, end-to-end framing/coordinate-transform tests, strict local checkpoint loading and real-data validation remain.
 
 ## Recovered source kits and checkpoint staging
 
-See [recovered kits](recovered_kits/README.md) for the three user-supplied fine-tuning packages, archive/checkpoint fingerprints, upstream LFS comparison and private-import instructions. Do not upload recovered checkpoint binaries or patient-linked data while this fork is public.
+See [recovered kits](recovered_kits/README.md) for the three user-supplied fine-tuning packages, archive/checkpoint fingerprints and upstream LFS comparison. No checkpoint binaries are re-uploaded. This public research branch contains code, schemas, synthetic tests and documentation only; keep all case-level data and newly fine-tuned model artifacts in approved secure storage.
+
+
+## Added pipeline tools (25 November 2026)
+
+- tools/make_annotation_templates.py — creates schema-validated empty annotation records from coded CSV metadata.
+- tools/validate_annotations.py — checks schema, bounds, polygon area/self-intersection and model/corrected geometry.
+- tools/prepare_splits.py — exact-count patient-disjoint 240/60/100 split; fails on patient overlap or impossible group allocation.
+- tools/build_training_inputs.py — validates source hashes/dimensions, rasterizes masks, adapts the 22-channel HRNet and S1 training JSONs, and physically separates locked-test inputs.
+- tools/compute_measurements_from_annotations.py — calls the fork's existing spinopelvic geometry function.
+- analysis/analyze_agreement.py — coverage, MAE, bias, RMSE, Bland–Altman, ICC(A,1) and patient-cluster bootstrap CIs.
+- tools/train_femoral_unet.py — new femoral-union fine-tuning recipe aligned to the source preprocessing path.
+- tools/export_custom_checkpoint.py — strict-load, ONNX graph check and synthetic-input PyTorch/ONNX parity.
+- .github/workflows/spinopelvic-research-tests.yml — synthetic-only regression tests.
+
+The research utilities write to secure local output paths outside the Git repository. The 100-case locked test is excluded by default and must only be opened after protocol and model-selection freeze.
