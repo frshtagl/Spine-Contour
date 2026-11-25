@@ -35,7 +35,8 @@
       "properties": {
         "sha256": {
           "type": "string",
-          "pattern": "^[a-fA-F0-9]{64}$"
+          "pattern": "^[a-fA-F0-9]{64}$",
+          "description": "SHA-256 of the exact original source image file bytes, matching the parent application's bundle-io.js sha256File; not decoded pixels or a re-encoded image."
         },
         "width_px": {
           "type": "integer",
