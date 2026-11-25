@@ -399,6 +399,7 @@ def main() -> int:
         args.out.mkdir(parents=True, exist_ok=True)
         report = build(records, image_index, splits, args.reader_code, args.out, args.include_test_reference)
         report["split_manifest_sha256"] = sha256_file(args.splits)
+        report["current_input_manifest_sha256"] = current_input_hash
         report["output_files"] = output_file_manifest(args.out)
         report["output_manifest_sha256"] = hashlib.sha256(
             json.dumps(report["output_files"], sort_keys=True, separators=(",", ":")).encode()
