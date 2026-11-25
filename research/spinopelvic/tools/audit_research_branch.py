@@ -31,6 +31,8 @@ PRESENT = [
     "research/spinopelvic/tools/build_training_inputs.py",
     "research/spinopelvic/tools/compute_measurements_from_annotations.py",
     "research/spinopelvic/tools/train_femoral_unet.py",
+    "research/spinopelvic/tools/predict_femoral_unet.py",
+    "research/spinopelvic/tools/make_source_frames.py",
     "research/spinopelvic/tools/export_custom_checkpoint.py",
     "research/spinopelvic/tools/normalize_model_predictions.py",
     "research/spinopelvic/tools/validate_end_to_end_framing.py",
