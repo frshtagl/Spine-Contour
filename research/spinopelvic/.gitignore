@@ -1,4 +1,4 @@
-# All study data and derived artifacts must remain outside this public repository.
+# Patient-level data and derived clinical artifacts must never enter Git.
 data/
 datasets/
 raw/
@@ -7,14 +7,13 @@ annotations/private/
 reference_readings/
 patient_manifests/
 splits/private/
-checkpoints/
 runs/
 outputs/
 results/private/
 exports/private/
 colab/private/
 
-# Common medical image and annotation artifacts.
+# Common medical image formats.
 *.dcm
 *.dicom
 *.nii
@@ -30,7 +29,7 @@ colab/private/
 *.bmp
 *.webp
 
-# Training artifacts and serialized datasets.
+# Model and training artifacts: deny by default.
 *.pt
 *.pth
 *.ckpt
@@ -41,6 +40,17 @@ colab/private/
 *.parquet
 *.h5
 *.hdf5
+
+# Explicit LFS allow-list for recovered checkpoints.
+# Do not add these files until this repository has been changed to PRIVATE.
+!recovered_kits/vertebra_unet_finetune/weights/*.pt
+!recovered_kits/hrnet_landmarks_finetune/weights/*.pt
+!recovered_kits/s1_finetune/weights/*.pt
+!recovered_kits/femoral/weights/*.pt
+!recovered_kits/vertebra_unet_finetune/weights/*.pth
+!recovered_kits/hrnet_landmarks_finetune/weights/*.pth
+!recovered_kits/s1_finetune/weights/*.pth
+!recovered_kits/femoral/weights/*.pth
 
 # Local logs and notebook checkpoints.
 *.log
