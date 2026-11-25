@@ -42,3 +42,17 @@ The public repository includes the lumbar model architectures/checkpoints and in
 - Added tools/audit_research_branch.py to check research-file presence, missing pipeline components and Git LFS pointer status without opening patient data.
 - Confirmed the branch is still a scaffold: patient split generation, dataset construction, model training loops, evaluation, custom ONNX export and executable Colab workflow were absent at the audited head.
 - No patient data were accessed; no checkpoint tensor was strict-loaded; no model was trained; no clinical result is claimed.
+
+## 2026-11-25 — recovered kit audit and repository staging
+
+- Reopened the three original user-supplied archives from the Library and verified their exact byte sizes and SHA-256 fingerprints.
+- Inspected ZIP contents without extracting case-level image/annotation payloads into Git. The archives contain a sample lateral radiograph and/or masks, pseudo-annotations, overlays, predictions or measurements; those are excluded from the public repository.
+- Reopened the source-only package: 27 source/configuration/documentation files, no checkpoint binaries and no case-level image/label assets.
+- Ran Python syntax compilation on all 14 Python files in the source-only package: passed. Parsed all JSON metadata: passed. This is not a PyTorch checkpoint load or training test.
+- Compared recovered checkpoint hashes against the fork's current Git LFS pointer files. U-Net matches exactly; HRNet and S1 differ in both size and hash. Preserve them as separate recovered checkpoints; do not overwrite upstream baseline paths.
+- Confirmed an existing femoral U-Net LFS pointer at `backend/weights/femoral_unet.pt`; the separate femoral ZIP is still pending.
+- Added explicit Git LFS tracking patterns and a narrow allow-list for recovered checkpoint staging paths. No recovered checkpoint binaries were uploaded.
+- Added checkpoint upload instructions, per-model weight staging READMEs, a provenance manifest and a femoral-kit placeholder.
+- Repository visibility was rechecked: still public. No patient-level data, sample images, masks, annotations or recovered checkpoint binaries were committed.
+- The source-only archive remains in the user's ChatGPT Library until the fork is private and kit-specific provenance/licensing is reviewed.
+- No checkpoint tensor loading, model training, test evaluation or clinical validation was performed.
