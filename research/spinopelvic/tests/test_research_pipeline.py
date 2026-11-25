@@ -70,6 +70,7 @@ class ResearchPipelineTests(unittest.TestCase):
             self.assertEqual(result["counts"], {"train": 2, "validation": 1, "locked_test": 1, "total": 4})
             self.assertEqual(len(set(result["study_ids"]["train"]) & set(result["study_ids"]["validation"])), 0)
             self.assertEqual(result["study_ids"]["locked_test"], ["T1"])
+            self.assertEqual(result["input_manifest_sha256"], input_manifest_sha256(records))
             split_schema = json.loads((ROOT / "schemas" / "split_manifest.schema.json").read_text(encoding="utf-8"))
             from jsonschema import Draft202012Validator
             self.assertEqual(list(Draft202012Validator(split_schema).iter_errors(result)), [])
