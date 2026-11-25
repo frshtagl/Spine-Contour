@@ -175,6 +175,24 @@ def make_model_item(record: dict[str, Any], file_name: str) -> tuple[dict[str, A
     return hrnet, s1
 
 
+def input_manifest_sha256(records: list[dict[str, Any]]) -> str:
+    """Recompute the study/image/stage fingerprint used when the split was frozen."""
+    studies: dict[str, tuple[str, str, str]] = {}
+    for record in records:
+        annotation = record.get("annotation") or {}
+        stage = annotation.get("stage")
+        if stage not in {"development", "locked_test_reference"}:
+            continue
+        sid = str(record.get("study_id") or "")
+        digest = str((record.get("image") or {}).get("sha256") or "").lower()
+        current = (sid, digest, str(stage))
+        prior = studies.setdefault(sid, current)
+        if prior != current:
+            raise ValueError(f"Reader records disagree on study/image/stage identity for {sid}")
+    rows = sorted(studies.values())
+    return hashlib.sha256(json.dumps(rows, separators=(",", ":")).encode()).hexdigest()
+
+
 def _write_json(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
@@ -373,6 +391,9 @@ def main() -> int:
         split_errors = list(Draft202012Validator(split_schema).iter_errors(splits))
         if split_errors:
             raise ValueError(f"Invalid split manifest: {split_errors[0].message}")
+        current_input_hash = input_manifest_sha256(records)
+        if current_input_hash != splits["input_manifest_sha256"]:
+            raise ValueError("Annotation study/image/stage manifest differs from the frozen split input hash; regenerate or formally amend the split before building datasets")
         if args.out.exists() and any(args.out.iterdir()):
             raise FileExistsError(f"Output directory is not empty: {args.out}. Choose a new run directory; stale datasets are never merged.")
         args.out.mkdir(parents=True, exist_ok=True)
