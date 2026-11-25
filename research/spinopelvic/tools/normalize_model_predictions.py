@@ -121,7 +121,12 @@ def _map_model_filename(study_id: str, source: Path) -> str:
 
 
 def _find_mask(directory: Path, model_file: str, source: Path) -> Path | None:
-    candidates = [directory / f"{Path(model_file).stem}.png", directory / f"{source.stem}.png"]
+    candidates = [
+        directory / f"{Path(model_file).stem}.png",
+        directory / f"{Path(model_file).stem}_mask.png",
+        directory / f"{source.stem}.png",
+        directory / f"{source.stem}_mask.png",
+    ]
     return next((path for path in candidates if path.is_file()), None)
 
 
