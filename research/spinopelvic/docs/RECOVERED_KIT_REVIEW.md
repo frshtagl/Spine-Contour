@@ -38,9 +38,11 @@ The recovered training scripts are useful as model-specific reference implementa
 - tools/prepare_splits.py: generates exact-count patient-disjoint train/validation/locked-test partitions; fails if the requested counts require splitting a patient.
 - tools/build_training_inputs.py: verifies image-file SHA-256, rasterizes model targets, and writes the three recovered-kit dataset formats. Incomplete L1–L5 masks are excluded from U-Net training instead of being mislabeled as background. not_placed is never treated as a negative.
 - tools/train_femoral_unet.py: adds a binary femoral-union fine-tuning loop using the source model's robust rescale, CLAHE, letterbox and 640-pixel model input. This is a newly specified study recipe, not the original hidden training recipe.
-- tools/compute_measurements_from_annotations.py: delegates PI/PT/SS/LL geometry to the exact fork function backend.utils.spinopelvic_measurements_from_geometry.
+- tools/normalize_model_predictions.py: converts source HRNet/S1 prediction JSON and original-frame U-Net/femoral masks into separate model_point/model_bbox/model_polygons fields; human annotations remain separate.
+- tools/compute_measurements_from_annotations.py: delegates PI/PT/SS/LL geometry to the exact fork function backend.utils.spinopelvic_measurements_from_geometry, with optional model-score filtering.
 - analysis/analyze_agreement.py: reports coverage, MAE, median absolute error, bias, RMSE, Bland–Altman limits, ICC(A,1), and patient-cluster bootstrap intervals.
 - tools/export_custom_checkpoint.py: strict-loads a selected custom checkpoint, exports ONNX, checks the graph and compares synthetic-input PyTorch/ONNX outputs.
+- tools/validate_end_to_end_framing.py: synthetic round-trip checks for source S1 crop, point/mask restoration and reframe acceptance.
 
 ## Validation boundary
 
