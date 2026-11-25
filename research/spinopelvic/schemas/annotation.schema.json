@@ -527,6 +527,12 @@
               "type": "null"
             }
           ]
+        },
+        "uncertainty_note": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "allOf": [
