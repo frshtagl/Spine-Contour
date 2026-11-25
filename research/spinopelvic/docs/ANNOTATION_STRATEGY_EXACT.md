@@ -66,7 +66,7 @@ The application writes one record per film at:
 The schema identifier is spinecontour.segmentation-label/1. The record includes:
 
 - study filename stem;
-- image filename, SHA-256 of stored grey pixels, width and height;
+- image filename, SHA-256 of the exact original source file bytes, width and height. This was verified in bundle-io.js: sha256File streams the original file bytes into SHA-256; it is not a hash of decoded grey pixels or a re-encoded image.
 - film region and view;
 - model name and model version/hash;
 - application version and save timestamp;
@@ -75,7 +75,7 @@ The schema identifier is spinecontour.segmentation-label/1. The record includes:
 - two femoral-head entries;
 - edited-point counts and optional comment/flags.
 
-Coordinates are stored in pixels of the stored image, with origin at the top-left. They are not normalized coordinates.
+Coordinates are stored in pixels of the decoded image, with origin at the top-left. They are not normalized coordinates. The image fingerprint is a separate hash of original file bytes. For DICOM, backend/server.py::_dicom_pixel_array reads one grayscale frame, applies RescaleSlope/RescaleIntercept and MONOCHROME1 inversion; the source image bytes are still what get hashed.
 
 For a body, corners are stored as SA, SP, IA and IP. A segmented body may retain the model's mask outline as a contour. Edited and manual bodies have no model contour in the record; their four-corner geometry is not a hand-traced pixel mask.
 
@@ -131,3 +131,10 @@ The annotation editor documentation does not define a full clinical research SOP
 - docs/superpowers/specs/2026-10-15-annotation-bundle-export-import-design.md
 
 This is a source-derived extraction, not a claim that the research-specific pixel-mask schema is part of the original application editor.
+
+
+## 8. Hashing and DICOM decoding correction (verified from source)
+
+The initial draft in this document described the image SHA-256 as a hash of stored grey pixels. That wording was incorrect. The application bundle export/import code calls sha256File on the original file and hashes its raw bytes. The research schema and template generator now follow that exact behavior.
+
+For DICOM, the parent backend decodes a single grayscale pixel array, applies RescaleSlope and RescaleIntercept, and inverts MONOCHROME1. The research template and dataset tools mirror this decoding path. The DICOM file hash remains over the original file bytes; model-input TIFFs are derived copies and do not replace the source fingerprint.
