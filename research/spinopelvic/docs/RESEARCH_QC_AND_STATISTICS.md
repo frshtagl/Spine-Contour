@@ -24,7 +24,7 @@ The two expert femoral-head centres are used to determine the hip midpoint. The 
 ## Required model metrics
 
 - Vertebral U-Net: per-level Dice, foreground mean Dice, boundary/contour review and class-presence failures.
-- Femoral U-Net: union-mask Dice/IoU, edge truncation, connected-component behavior and two-disc-fit acceptance.
+- Femoral U-Net: positive-reference union-mask Dice/IoU, empty-reference specificity, edge truncation, connected-component behavior and two-disc-fit acceptance. Empty-reference cases are reported separately, not counted as perfect Dice.
 - HRNet: per-landmark Euclidean localization error in original-image pixels, per-landmark P95, missing-point rate and left-/right-facing subgroup results. State pixel units and image dimensions; do not compare historical val_px without establishing its coordinate frame.
 - S1 detector: SA/SP localization error, endplate-angle error, detection misses, endpoint swaps and facing-stratified results.
 - End-to-end: run with predicted S1 framing/crop, not only ground-truth-framed crops.
