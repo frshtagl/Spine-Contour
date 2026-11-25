@@ -85,7 +85,8 @@ def preprocess(image: np.ndarray, mask: np.ndarray | None = None) -> tuple[np.nd
     y = None
     if mask is not None:
         mcanvas = np.zeros((SIZE_CANVAS, SIZE_CANVAS), dtype=np.uint8)
-        mcanvas[top:top + rh, left:left + rw] = cv2.resize(mask.astype(np.uint8), (rw, rh), interpolation=cv2.INTER_NEAREST)
+        binary_mask = (np.asarray(mask) > 0).astype(np.uint8)
+        mcanvas[top:top + rh, left:left + rw] = cv2.resize(binary_mask, (rw, rh), interpolation=cv2.INTER_NEAREST)
         y = cv2.resize(mcanvas, (SIZE_MODEL, SIZE_MODEL), interpolation=cv2.INTER_NEAREST)
     return x, y
 
