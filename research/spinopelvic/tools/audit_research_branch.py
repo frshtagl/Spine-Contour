@@ -54,9 +54,6 @@ PENDING = [
     "research/spinopelvic/recovered_kits/source_bundle/contents/hrnet_landmarks_finetune/train.py",
     "research/spinopelvic/recovered_kits/source_bundle/contents/s1_finetune/train.py",
     "research/spinopelvic/tools/validate_predicted_s1_framing.py",
-    "research/spinopelvic/recovered_kits/source_bundle/contents/vertebra_unet_finetune/train.py",
-    "research/spinopelvic/recovered_kits/source_bundle/contents/hrnet_landmarks_finetune/train.py",
-    "research/spinopelvic/recovered_kits/source_bundle/contents/s1_finetune/train.py",
 ]
 OPTIONAL = [
     "research/spinopelvic/colab/spinopelvic_training.ipynb",
