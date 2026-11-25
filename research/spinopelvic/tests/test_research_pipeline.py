@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import sys
@@ -15,7 +16,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 sys.path.insert(0, str(ROOT / "analysis"))
 
 from prepare_splits import make_split  # noqa: E402
-from build_training_inputs import build, sha256_file  # noqa: E402
+from build_training_inputs import build, sha256_file, input_manifest_sha256  # noqa: E402
 from make_annotation_templates import make_record  # noqa: E402
 from analyze_agreement import analyze  # noqa: E402
 from validate_annotations import validate_record  # noqa: E402
@@ -72,6 +73,31 @@ class ResearchPipelineTests(unittest.TestCase):
             split_schema = json.loads((ROOT / "schemas" / "split_manifest.schema.json").read_text(encoding="utf-8"))
             from jsonschema import Draft202012Validator
             self.assertEqual(list(Draft202012Validator(split_schema).iter_errors(result)), [])
+
+    def test_split_input_fingerprint_changes_when_stage_changes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            records = []
+            for idx, (sid, patient, stage) in enumerate([
+                ("D1", "P1", "development"), ("T1", "P2", "locked_test_reference")
+            ]):
+                image_path = Path(tmp) / f"{sid}.png"
+                Image.fromarray(np.full((128, 128), idx, dtype=np.uint8)).save(image_path)
+                records.append(synthetic_record(sid, patient, stage, image_path))
+            original = input_manifest_sha256(records)
+            changed = copy.deepcopy(records)
+            changed[0]["annotation"]["stage"] = "locked_test_reference"
+            self.assertNotEqual(original, input_manifest_sha256(changed))
+
+    def test_split_input_fingerprint_rejects_inconsistent_reader_identity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            image_path = Path(tmp) / "D1.png"
+            Image.fromarray(np.zeros((128, 128), dtype=np.uint8)).save(image_path)
+            first = synthetic_record("D1", "P1", "development", image_path, "R1")
+            second = copy.deepcopy(first)
+            second["annotation"]["reader_code"] = "R2"
+            second["image"]["sha256"] = "f" * 64
+            with self.assertRaisesRegex(ValueError, "disagree on study/image/stage identity"):
+                input_manifest_sha256([first, second])
 
     def test_split_refuses_patient_leakage(self):
         with tempfile.TemporaryDirectory() as tmp:
