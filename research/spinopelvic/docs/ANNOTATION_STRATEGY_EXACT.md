@@ -123,9 +123,11 @@ The annotation editor documentation does not define a full clinical research SOP
 - docs/design/level-editor/label-record.partial.example.json
 - renderer/data/levels.js
 - renderer/data/label-record.js
+- renderer/utils/bundle-io.js (original-file byte hashing)
 - backend/models/training.py
 - backend/models/hrnet.py
 - backend/models/models.py
+- backend/server.py::_dicom_pixel_array (DICOM slope/intercept and MONOCHROME1 decoding)
 - backend/femoral.py
 - docs/superpowers/NEXT-SESSION-retraining.md
 - docs/superpowers/specs/2026-10-15-annotation-bundle-export-import-design.md
