@@ -267,6 +267,7 @@ def main() -> int:
     parser.add_argument("--model-version", required=True)
     parser.add_argument("--component-manifest", type=Path, help="Optional JSON with component checkpoint hashes")
     parser.add_argument("--frame-manifest", type=Path, help="Optional make_source_frames.py manifest; restores cropped model outputs to original image coordinates")
+    parser.add_argument("--framed-images", type=Path, help="Framed HRNet image directory; verifies each crop SHA-256 against the frame manifest")
     parser.add_argument("--hrnet-raw-score-min", type=float, default=0.0, help="Pre-registered minimum raw HRNet heatmap peak; not a probability")
     parser.add_argument("--s1-score-min", type=float, default=0.0, help="Pre-registered minimum S1 detector score")
     parser.add_argument("--min-femoral-fit-confidence", type=float, default=0.0)
@@ -301,6 +302,9 @@ def main() -> int:
         hrnet_map = load_prediction_map(args.hrnet_predictions)
         s1_map = load_prediction_map(args.s1_predictions)
         frame_map = load_frame_manifest(args.frame_manifest)
+        uses_crop_components = bool(args.hrnet_predictions or args.vertebra_mask_dir or args.femoral_mask_dir)
+        if args.frame_manifest and uses_crop_components and not args.framed_images:
+            raise ValueError("--framed-images is required when normalizing crop-frame HRNet/U-Net/femoral outputs with a frame manifest")
         base_files = sorted(args.base_annotations.rglob("*.json"))
         if not base_files:
             raise ValueError("No base annotation templates found")
@@ -339,6 +343,13 @@ def main() -> int:
                     raise ValueError(f"Frame manifest window is outside the source image for study {sid}")
                 framed_file = str(frame["framed_file"])
                 s1_file = str(frame.get("s1_file") or model_file)
+                if args.framed_images:
+                    framed_path = args.framed_images / framed_file
+                    if not framed_path.is_file():
+                        raise FileNotFoundError(f"Missing framed model input: {framed_path}")
+                    expected_framed_hash = frame.get("framed_file_sha256")
+                    if expected_framed_hash and sha256_file(framed_path) != expected_framed_hash:
+                        raise ValueError(f"Framed input hash mismatch for study {sid}")
             else:
                 framed_file = model_file
                 s1_file = model_file
@@ -387,6 +398,7 @@ def main() -> int:
                 "hrnet_predictions_sha256": sha256_file(args.hrnet_predictions) if args.hrnet_predictions else None,
                 "s1_predictions_sha256": sha256_file(args.s1_predictions) if args.s1_predictions else None,
                 "frame_manifest_sha256": sha256_file(args.frame_manifest) if args.frame_manifest else None,
+                "framed_input_directory_supplied": bool(args.framed_images),
             },
             "score_thresholds": {"hrnet_raw_score_min": args.hrnet_raw_score_min, "s1_score_min": args.s1_score_min},
             "femoral_fit_thresholds": {"fit_confidence_min": args.min_femoral_fit_confidence, "iou_min": args.min_femoral_iou},
