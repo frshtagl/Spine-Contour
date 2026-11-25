@@ -154,6 +154,25 @@ class ResearchPipelineTests(unittest.TestCase):
         self.assertEqual(metric["withheld_reasons"], {"hip_axis_qc_failed": 1})
         self.assertIsNotNone(metric["bootstrap_95ci"]["mae_deg"])
 
+    def test_pairwise_model_comparison_uses_matched_studies_and_patient_bootstrap(self):
+        rows = []
+        refs = {"S1": 48.0, "S2": 52.0, "S3": 52.0}
+        predictions = {"A": {"S1": 50.0, "S2": 54.0, "S3": 54.0},
+                       "B": {"S1": 49.0, "S2": None, "S3": 53.0}}
+        patients = {"S1": "P1", "S2": "P2", "S3": "P3"}
+        for model, values in predictions.items():
+            for sid, prediction in values.items():
+                rows.append({"study_id": sid, "patient_group_code": patients[sid], "model_id": model,
+                             "parameter": "PI", "prediction": prediction, "reference": refs[sid],
+                             "withheld_reason": "qc" if prediction is None else ""})
+        report = analyze(rows, bootstrap=100, seed=7)
+        pair = report["pairwise_comparisons"]["PI"]["A_vs_B"]
+        self.assertEqual(pair["n_reference"], 3)
+        self.assertEqual(pair["n_matched_predictions"], 2)
+        self.assertAlmostEqual(pair["coverage_difference_a_minus_b"], 1 / 3)
+        self.assertAlmostEqual(pair["paired_mae_difference_deg_a_minus_b"], 1.0)
+        self.assertIsNotNone(pair["paired_difference_95ci"]["mae_a_minus_b_deg"])
+
 
 if __name__ == "__main__":
     unittest.main()
