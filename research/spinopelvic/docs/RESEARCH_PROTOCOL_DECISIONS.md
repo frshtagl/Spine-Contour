@@ -15,7 +15,7 @@ This is a decision register, not an approved protocol. The investigator, radiolo
 | Femoral target | One combined union mask plus two expert centres | Define fit QC and when PI/PT are withheld |
 | S1 detector | Two S1 endpoints; recovered kit derives training box from keypoints plus padding | Decide whether to preserve source behavior or run a separately registered bbox-target experiment |
 | Model route | U-Net segmentation and/or HRNet landmarks share S1/femoral components | Pre-register primary and secondary routes |
-| Thresholds/QC | Freeze using development validation only | Define femoral fit acceptance, landmark confidence and withholding rules |
+| Thresholds/QC | Freeze using development validation only | Define separate HRNet raw-heatmap score, S1 detector score, femoral fit-confidence/IoU and U-Net class/contour QC rules; these scores are not interchangeable |
 | Locked test | One confirmatory opening after all choices freeze | Define access authorization, analysis plan and reporting responsibilities |
 
 ## Non-negotiable leakage controls
