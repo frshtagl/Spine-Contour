@@ -30,7 +30,7 @@ Implemented in tools/make_annotation_templates.py, tools/validate_annotations.py
 - Creates HRNet heatmap targets for 22 landmarks.
 - Creates Keypoint R-CNN targets: S1 box plus two S1 keypoints.
 - Writes both expert femoral centres to a separate geometry/reference_geometry_<split>.json file; they are not HRNet channels.
-- Preserves original-image coordinates and delegates resize/letterbox preprocessing to the model-specific source trainers. End-to-end S1 crop and inverse-coordinate restoration tests remain pending.
+- Preserves original-image coordinates and delegates resize/letterbox preprocessing to the model-specific source trainers. Synthetic crop/restore and full locate/search tests are present in tools/validate_end_to_end_framing.py and tools/validate_synthetic_s1_search.py. Integration with the actual trained S1 detector remains pending.
 - Spatial augmentation remains in the model-specific training code; verify that every image/mask/box/keypoint transform stays aligned.
 - Records the split-manifest hash and per-file output hashes/fingerprint in the secure dataset-build manifest; test labels must not enter training loaders.
 
