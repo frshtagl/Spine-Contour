@@ -111,6 +111,9 @@ class ResearchPipelineTests(unittest.TestCase):
             self.assertEqual(report["splits"]["train"]["task_examples"].get("vertebra", 0), 0)
             self.assertEqual(report["splits"]["validation"]["task_examples"]["vertebra"], 1)
             self.assertTrue((out / "vertebra" / "val_names.txt").is_file())
+            geometry = json.loads((out / "geometry" / "reference_geometry_train.json").read_text(encoding="utf-8"))
+            self.assertTrue(geometry["studies"][0]["femoral_centres_complete"])
+            self.assertEqual(report["splits"]["train"]["task_examples"]["femoral_reference_centres"], 1)
 
     def test_annotation_template_uses_file_byte_hash(self):
         with tempfile.TemporaryDirectory() as tmp:
