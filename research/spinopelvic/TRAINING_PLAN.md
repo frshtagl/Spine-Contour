@@ -30,7 +30,7 @@ Implemented in tools/make_annotation_templates.py, tools/validate_annotations.py
 - Creates HRNet heatmap targets for 22 landmarks.
 - Creates Keypoint R-CNN targets: S1 box plus two S1 keypoints.
 - Writes both expert femoral centres to a separate geometry/reference_geometry_<split>.json file; they are not HRNet channels.
-- Preserves original-image coordinates and delegates resize/letterbox preprocessing to the model-specific source trainers. Synthetic crop/restore and full locate/search tests are present in tools/validate_end_to_end_framing.py and tools/validate_synthetic_s1_search.py. Integration with the actual trained S1 detector remains pending.
+- Preserves original-image coordinates in the canonical annotation set. tools/make_source_frames.py then uses the parent app's exact reframe/fallback functions to crop U-Net/HRNet/femoral inputs; S1 detector training remains unframed because it searches candidate windows at inference. The source trainers apply their matching resize/letterbox preprocessing. Synthetic crop/restore and locate/search checks are present; integration with the actual trained S1 detector remains pending.
 - Spatial augmentation remains in the model-specific training code; verify that every image/mask/box/keypoint transform stays aligned.
 - Records the split-manifest hash and per-file output hashes/fingerprint in the secure dataset-build manifest; test labels must not enter training loaders.
 
@@ -38,8 +38,8 @@ Implemented in tools/make_annotation_templates.py, tools/validate_annotations.py
 
 The recovered user-supplied vertebral U-Net training script is in the source-only archive; the new femoral U-Net trainer is in tools/train_femoral_unet.py. No training run has been performed.
 
-- Fine-tune `backend/weights/vertebra_unet.pt` with L1–L5/background masks, after verifying the six-class channel semantics against the actual checkpoint.
-- Fine-tune `backend/weights/femoral_unet.pt` with the binary femoral union mask.
+- Fine-tune `backend/weights/vertebra_unet.pt` on S1-framed L1–L5/background masks, after verifying the six-class channel semantics against the actual checkpoint.
+- Fine-tune `backend/weights/femoral_unet.pt` on S1-framed binary femoral union masks using the source-compatible CLAHE/letterbox/640 preprocessing.
 - Fine-tune `backend/weights/s1_keypointrcnn.pt` with S1 bounding boxes and two S1 keypoints.
 - Extract L1–L5 corners from the vertebral masks using the source corner extraction method.
 - Apply the source two-disc fitter to the femoral union mask and validate centre errors against expert references.
@@ -49,7 +49,7 @@ The recovered user-supplied vertebral U-Net training script is in the source-onl
 
 The recovered HRNet training script is in the source-only archive. No training run has been performed.
 
-- Fine-tune the existing `backend/weights/hrnet_landmarks.pt` HRNet-W32 checkpoint with the existing 22 output channels.
+- Fine-tune the existing `backend/weights/hrnet_landmarks.pt` HRNet-W32 checkpoint with the existing 22 output channels rebased to the S1-framed crop coordinate system.
 - Preserve the original 22 channels: four corners for L1–L5 and two S1 endpoints.
 - Do not add femoral-centre channels; use the shared femoral U-Net and two-disc fitter.
 - Retain U-Net presence evidence as in the source pipeline, so HRNet cannot create unsupported vertebral levels without presence/QC evidence.
@@ -73,7 +73,7 @@ Report:
 - Parameter-specific MAE, median absolute error, signed bias and patient-level bootstrap 95% CIs for PI, PT, SS and LL.
 - Per-parameter coverage, four-angle coverage and withholding reasons.
 - Bland–Altman bias and limits of agreement; ICC(A,1) with CIs.
-- Paired Model A/Model B absolute-error differences on the same test patients with valid outputs; report coverage differences separately.
+- Paired Model A/Model B absolute-error differences on the same test patients with valid outputs; report patient-cluster bootstrap CIs and coverage differences separately.
 - L1–L5 class-wise Dice, femoral union-mask Dice, line-angle error, keypoint localization error, femoral-centre error and runtime.
 - Screened, excluded, reference-ineligible, attempted, accepted and withheld denominators.
 
@@ -97,4 +97,4 @@ Colab is conditional on written UHS and site-specific permission. If approval is
 
 ## Implementation status — 25 November 2026
 
-The deterministic split generator, schema-checked dataset builder, source-compatible measurement extraction, agreement analysis, femoral U-Net training entry point and custom-checkpoint ONNX exporter are now present in the research branch. The U-Net/HRNet/S1 training loops are preserved in the source-only archive and imported locally using the hash-verifying script. Actual strict checkpoint loading, fine-tuning, end-to-end predicted S1 framing, Colab orchestration and locked-test evaluation remain pending.
+The deterministic split generator, schema-checked dataset builder, source-app S1 frame cropper, model-prediction normalizer, source-compatible measurement extraction, paired agreement analysis, femoral U-Net training/inference entry points and custom-checkpoint ONNX exporter are now present in the research branch. The U-Net/HRNet/S1 training loops are preserved in the source-only archive and imported locally using the hash-verifying script. Actual strict checkpoint loading, fine-tuning, trained-S1 detector integration, execution of the local crop/normalization workflow, Colab orchestration and locked-test evaluation remain pending.
