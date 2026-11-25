@@ -1,0 +1,99 @@
+# Copy this file to secure experiment storage and fill every null before a run.
+# Do not commit per-study identifiers, data paths, checkpoints or run outputs.
+experiment:
+  id: null
+  protocol_version: null
+  git_commit: null
+  seed: null
+  operator_code: null
+  started_utc: null
+  notes: null
+
+data:
+  split_manifest_sha256: null
+  annotation_schema: spinecontour-spinopelvic.annotation/0.2
+  annotation_reader_code: null
+  image_hash_algorithm: sha256_of_exact_source_file_bytes
+  train_studies: 240
+  validation_studies: 60
+  locked_test_studies: 100
+  locked_test_opened: false
+
+models:
+  vertebra_unet:
+    enabled: true
+    architecture: segmentation_models_pytorch.Unet
+    encoder: resnet34
+    input_channels: 1
+    input_size: 768
+    classes: 6
+    initialization: backend/weights/vertebra_unet.pt
+    checkpoint_sha256: null
+  hrnet_landmarks:
+    enabled: true
+    architecture: timm.HRNet-W32
+    input_channels: 1
+    input_size: 768
+    heatmaps: 22
+    initialization: backend/weights/hrnet_landmarks.pt
+    checkpoint_sha256: null
+  s1_keypointrcnn:
+    enabled: true
+    architecture: torchvision.KeypointRCNN_ResNet50_FPN
+    keypoints: 2
+    input_size: 768
+    initialization: backend/weights/s1_keypointrcnn.pt
+    checkpoint_sha256: null
+  femoral_unet:
+    enabled: true
+    architecture: segmentation_models_pytorch.Unet
+    encoder: resnet34
+    input_channels: 1
+    input_size: 640
+    classes: 1
+    initialization: backend/weights/femoral_unet.pt
+    checkpoint_sha256: null
+
+preprocessing:
+  robust_rescale_percentiles: [0.5, 99.5]
+  vertebra_canvas_px: 768
+  femoral_clahe_clip_limit: 2.0
+  femoral_clahe_tile_grid: [8, 8]
+  femoral_canvas_px: 768
+  femoral_model_px: 640
+  grayscale_mean: 0.449
+  grayscale_std: 0.226
+  s1_crop_localization: source_framing_module
+  coordinate_space: original_image_pixels
+
+training:
+  epochs: null
+  batch_size: null
+  learning_rate: null
+  weight_decay: null
+  optimizer: AdamW
+  scheduler: cosine_with_warmup
+  early_stopping_metric: null
+  augmentation: null
+  deterministic_algorithms: false
+  num_workers: null
+
+selection:
+  validation_metrics: []
+  thresholds_frozen: false
+  qc_policy_frozen: false
+  model_selection_signed_off_by: null
+
+evaluation:
+  locked_test_access_authorized_by: null
+  analysis_plan_version: null
+  metrics: [MAE, median_absolute_error, bias, RMSE, Bland_Altman, ICC_A1, coverage]
+  bootstrap_replicates: 2000
+  bootstrap_cluster: patient_group_code
+  report_path: null
+
+artifacts:
+  best_checkpoint_sha256: null
+  onnx_sha256: null
+  environment_lock_sha256: null
+  training_log_sha256: null
