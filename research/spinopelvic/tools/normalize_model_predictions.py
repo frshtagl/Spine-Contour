@@ -226,6 +226,8 @@ def main() -> int:
     try:
         if not any((args.hrnet_predictions, args.s1_predictions, args.vertebra_mask_dir, args.femoral_mask_dir)):
             raise ValueError("Supply at least one model prediction input")
+        if args.hrnet_predictions and args.vertebra_mask_dir:
+            raise ValueError("HRNet and vertebral U-Net both provide L1-L5 landmarks; normalize them as separate model routes to avoid overwriting one prediction with another")
         if not 0 <= args.min_femoral_fit_confidence <= 1 or not 0 <= args.min_femoral_iou <= 1:
             raise ValueError("Femoral fit confidence and IoU thresholds must be in [0,1]")
         if not args.allow_in_repo:
@@ -315,6 +317,7 @@ def main() -> int:
                 "s1_predictions_sha256": sha256_file(args.s1_predictions) if args.s1_predictions else None,
             },
             "femoral_fit_thresholds": {"fit_confidence_min": args.min_femoral_fit_confidence, "iou_min": args.min_femoral_iou},
+            "precedence": "If both HRNet and S1 predictions are supplied, S1 detector endpoints replace HRNet S1 endpoints; lumbar HRNet and vertebral U-Net routes must be normalized separately.",
             "component_checkpoint_manifest": component_hashes,
             "study_qc": study_qc,
             "output_annotations": records,
