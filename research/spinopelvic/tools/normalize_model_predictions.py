@@ -110,30 +110,34 @@ def _load_gray_mask(path: Path, expected_shape: tuple[int, int]) -> np.ndarray:
     return array
 
 
-def _apply_hrnet(record: dict[str, Any], item: dict[str, Any] | None) -> int:
+def _apply_hrnet(record: dict[str, Any], item: dict[str, Any] | None, min_raw_score: float) -> dict[str, Any]:
     if item is None:
-        return 0
+        return {"predicted": 0, "accepted": 0, "rejected_below_score": 0, "raw_points": {}}
     width, height = record["image"]["width_px"], record["image"]["height_px"]
     points = item.get("landmarks", {})
     scores = item.get("conf", {})
-    placed = 0
+    accepted = rejected = 0
+    raw_points = {}
     for name in HRNET_NAMES:
         if name not in points:
             continue
         point = _finite_point(points[name], width, height, f"HRNet {name}")
         score = _finite_score(scores.get(name), f"HRNet {name}")
+        use_point = point is not None and (score is None and min_raw_score <= 0 or score is not None and score >= min_raw_score)
         landmark = record["landmarks"][name]
-        landmark["model_point"] = point
+        landmark["model_point"] = point if use_point else None
         landmark["model_score"] = score
         landmark["uncertainty"] = "uncertain"
-        landmark["uncertainty_note"] = "Raw HRNet heatmap peak; score is not calibrated as a probability"
-        placed += int(point is not None)
-    return placed
+        landmark["uncertainty_note"] = "Raw HRNet heatmap peak; score is not calibrated as a probability" if use_point else f"HRNet point withheld by raw-score threshold {min_raw_score}"
+        raw_points[name] = {"point": point, "raw_score": score, "accepted_for_geometry": bool(use_point)}
+        accepted += int(use_point)
+        rejected += int(point is not None and not use_point)
+    return {"predicted": len(raw_points), "accepted": accepted, "rejected_below_score": rejected, "raw_points": raw_points}
 
 
-def _apply_s1(record: dict[str, Any], item: dict[str, Any] | None) -> bool:
+def _apply_s1(record: dict[str, Any], item: dict[str, Any] | None, min_score: float) -> dict[str, Any]:
     if item is None:
-        return False
+        return {"detected": False, "accepted_for_geometry": False, "raw_keypoints": None}
     width, height = record["image"]["width_px"], record["image"]["height_px"]
     score = _finite_score(item.get("score"), "S1 detector")
     bbox = item.get("bbox")
@@ -146,16 +150,22 @@ def _apply_s1(record: dict[str, Any], item: dict[str, Any] | None) -> bool:
         record["s1_detection"]["model_bbox"] = bbox
         record["s1_detection"]["model_score"] = score
     keypoints = item.get("keypoints")
+    accepted = score is None and min_score <= 0 or score is not None and score >= min_score
+    raw_keypoints = None
     if keypoints is not None:
         if len(keypoints) != 2:
             raise ValueError("S1 prediction must contain exactly two keypoints")
+        raw_keypoints = {}
         for name, point in zip(("S1_SA", "S1_SP"), keypoints):
+            point = _finite_point(point, width, height, f"S1 {name}")
+            raw_keypoints[name] = point
             landmark = record["landmarks"][name]
-            landmark["model_point"] = _finite_point(point, width, height, f"S1 {name}")
+            landmark["model_point"] = point if accepted else None
             landmark["model_score"] = score
             landmark["uncertainty"] = "uncertain"
-            landmark["uncertainty_note"] = "Raw S1 detector keypoint; score is the detection score"
-    return bbox is not None and keypoints is not None
+            landmark["uncertainty_note"] = "Raw S1 detector keypoint; score is the detection score" if accepted else f"S1 keypoint withheld by score threshold {min_score}"
+    return {"detected": bbox is not None and keypoints is not None, "score": score,
+            "accepted_for_geometry": bool(accepted), "raw_keypoints": raw_keypoints}
 
 
 def _apply_vertebra_mask(record: dict[str, Any], mask: np.ndarray) -> dict[str, Any]:
@@ -192,13 +202,13 @@ def _apply_femoral_mask(record: dict[str, Any], mask: np.ndarray, min_fit_confid
     confidence = float(fit["fit_confidence"])
     iou = float(fit["iou"])
     accepted = confidence >= min_fit_confidence and iou >= min_iou
-    if accepted:
-        for name, circle in zip(("FH1_CENTER", "FH2_CENTER"), circles):
-            landmark = record["landmarks"][name]
+    for name, circle in zip(("FH1_CENTER", "FH2_CENTER"), circles):
+        landmark = record["landmarks"][name]
+        landmark["model_score"] = confidence
+        landmark["uncertainty"] = "uncertain"
+        landmark["uncertainty_note"] = f"Two-disc fit; method={fit['method']}; IoU={iou:.4f}" if accepted else "Two-disc fit withheld by configured confidence/IoU QC"
+        if accepted:
             landmark["model_point"] = [float(circle[0]), float(circle[1])]
-            landmark["model_score"] = confidence
-            landmark["uncertainty"] = "uncertain"
-            landmark["uncertainty_note"] = f"Two-disc fit; method={fit['method']}; IoU={iou:.4f}"
     return {"fit": {"method": fit["method"], "cost": float(fit["cost"]),
                      "fit_confidence": confidence, "iou": iou,
                      "circles": [[float(v) for v in circle] for circle in circles]},
@@ -218,6 +228,8 @@ def main() -> int:
     parser.add_argument("--model-name", required=True)
     parser.add_argument("--model-version", required=True)
     parser.add_argument("--component-manifest", type=Path, help="Optional JSON with component checkpoint hashes")
+    parser.add_argument("--hrnet-raw-score-min", type=float, default=0.0, help="Pre-registered minimum raw HRNet heatmap peak; not a probability")
+    parser.add_argument("--s1-score-min", type=float, default=0.0, help="Pre-registered minimum S1 detector score")
     parser.add_argument("--min-femoral-fit-confidence", type=float, default=0.0)
     parser.add_argument("--min-femoral-iou", type=float, default=0.0)
     parser.add_argument("--out", type=Path, required=True, help="Secure output folder outside Git")
@@ -275,8 +287,8 @@ def main() -> int:
             base_used.append(path)
             model_file = _map_model_filename(sid, source)
             qc = {"study_id": sid, "image_sha256": digest, "model_file": model_file, "components": {}}
-            qc["components"]["hrnet_points"] = _apply_hrnet(record, hrnet_map.get(model_file) or hrnet_map.get(source.name))
-            qc["components"]["s1_detected"] = _apply_s1(record, s1_map.get(model_file) or s1_map.get(source.name))
+            qc["components"]["hrnet_points"] = _apply_hrnet(record, hrnet_map.get(model_file) or hrnet_map.get(source.name), args.hrnet_raw_score_min)
+            qc["components"]["s1_detected"] = _apply_s1(record, s1_map.get(model_file) or s1_map.get(source.name), args.s1_score_min)
             if args.vertebra_mask_dir:
                 mask_path = _find_mask(args.vertebra_mask_dir, model_file, source)
                 if mask_path is not None:
@@ -316,6 +328,7 @@ def main() -> int:
                 "hrnet_predictions_sha256": sha256_file(args.hrnet_predictions) if args.hrnet_predictions else None,
                 "s1_predictions_sha256": sha256_file(args.s1_predictions) if args.s1_predictions else None,
             },
+            "score_thresholds": {"hrnet_raw_score_min": args.hrnet_raw_score_min, "s1_score_min": args.s1_score_min},
             "femoral_fit_thresholds": {"fit_confidence_min": args.min_femoral_fit_confidence, "iou_min": args.min_femoral_iou},
             "precedence": "If both HRNet and S1 predictions are supplied, S1 detector endpoints replace HRNet S1 endpoints; lumbar HRNet and vertebral U-Net routes must be normalized separately.",
             "component_checkpoint_manifest": component_hashes,
