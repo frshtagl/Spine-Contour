@@ -21,6 +21,11 @@ def _point(record: dict[str, Any], name: str) -> list[float] | None:
     item = record.get("landmarks", {}).get(name, {})
     if item.get("status") in {"segmented", "edited", "manual"}:
         return item.get("point")
+    # For a model-output record, keep the raw prediction in model_point and
+    # leave the human-reviewed point empty. This allows parallel human/model
+    # geometry without conflating the two annotation states.
+    if record.get("model") is not None and item.get("model_point") is not None:
+        return item["model_point"]
     return None
 
 
