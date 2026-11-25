@@ -166,7 +166,7 @@ def _apply_hrnet(record: dict[str, Any], item: dict[str, Any] | None, min_raw_sc
         landmark["model_score"] = score
         landmark["uncertainty"] = "uncertain"
         landmark["uncertainty_note"] = "Raw HRNet heatmap peak; score is not calibrated as a probability" if use_point else f"HRNet point withheld by raw-score threshold {min_raw_score}"
-        raw_points[name] = {"point": point, "raw_score": score, "accepted_for_geometry": bool(use_point)}
+        raw_points[name] = {"point_crop": crop_point, "point_original": point, "raw_score": score, "accepted_for_geometry": bool(use_point)}
         accepted += int(use_point)
         rejected += int(point is not None and not use_point)
     return {"predicted": len(raw_points), "accepted": accepted, "rejected_below_score": rejected, "raw_points": raw_points}
