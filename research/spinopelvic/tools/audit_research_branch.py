@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Audit the Spine-Contour spinopelvic research scaffold without opening patient data."""
+"""Audit the Spine-Contour spinopelvic research workspace without opening patient data."""
 from __future__ import annotations
 
 import argparse
@@ -14,23 +14,45 @@ PRESENT = [
     "research/spinopelvic/SYNOPSIS_ALIGNMENT.md",
     "research/spinopelvic/SYNOPSIS_AMENDMENT_RECOMMENDATIONS.md",
     "research/spinopelvic/configs/project.yaml",
+    "research/spinopelvic/configs/experiment_template.yaml",
     "research/spinopelvic/schemas/annotation.schema.json",
     "research/spinopelvic/schemas/annotation.example.json",
+    "research/spinopelvic/schemas/split_manifest.schema.json",
+    "research/spinopelvic/schemas/reference_measurements.schema.json",
+    "research/spinopelvic/schemas/reference_measurements.example.json",
     "research/spinopelvic/tests/test_annotation_schema.py",
+    "research/spinopelvic/tests/test_research_pipeline.py",
+    "research/spinopelvic/tests/test_reference_measurements_schema.py",
     "research/spinopelvic/tools/validate_annotations.py",
+    "research/spinopelvic/tools/make_annotation_templates.py",
+    "research/spinopelvic/tools/prepare_splits.py",
+    "research/spinopelvic/tools/build_training_inputs.py",
+    "research/spinopelvic/tools/compute_measurements_from_annotations.py",
+    "research/spinopelvic/tools/train_femoral_unet.py",
+    "research/spinopelvic/tools/export_custom_checkpoint.py",
+    "research/spinopelvic/tools/import_source_bundle.sh",
     "research/spinopelvic/tools/inspect_checkpoints.py",
+    "research/spinopelvic/analysis/analyze_agreement.py",
+    "research/spinopelvic/analysis/paired_predictions_template.csv",
+    "research/spinopelvic/requirements-research.txt",
+    "research/spinopelvic/requirements-research-test.txt",
     "research/spinopelvic/docs/ANNOTATION_STRATEGY_EXACT.md",
     "research/spinopelvic/docs/REPOSITORY_CROSS_CHECK_2026-11-25.md",
+    "research/spinopelvic/docs/RECOVERED_KIT_REVIEW.md",
+    "research/spinopelvic/docs/DATA_PIPELINE_RUNBOOK.md",
+    "research/spinopelvic/docs/RESEARCH_DATA_GOVERNANCE.md",
+    "research/spinopelvic/docs/RESEARCH_QC_AND_STATISTICS.md",
+    "research/spinopelvic/docs/EXPERIMENT_LOG_TEMPLATE.md",
+    "research/spinopelvic/docs/MODEL_CARDS.md",
+    "research/spinopelvic/docs/RESEARCH_PROTOCOL_DECISIONS.md",
+    ".github/workflows/spinopelvic-research-tests.yml",
 ]
 PENDING = [
-    "research/spinopelvic/tools/prepare_splits.py",
-    "research/spinopelvic/tools/create_annotation_templates.py",
-    "research/spinopelvic/tools/build_dataset.py",
-    "research/spinopelvic/tools/train_segmentation.py",
-    "research/spinopelvic/tools/train_hrnet.py",
-    "research/spinopelvic/tools/train_s1.py",
-    "research/spinopelvic/tools/evaluate.py",
-    "research/spinopelvic/tools/export_checkpoint.py",
+    "research/spinopelvic/recovered_kits/source_bundle/contents/vertebra_unet_finetune/train.py",
+    "research/spinopelvic/recovered_kits/source_bundle/contents/hrnet_landmarks_finetune/train.py",
+    "research/spinopelvic/recovered_kits/source_bundle/contents/s1_finetune/train.py",
+    "research/spinopelvic/tools/validate_end_to_end_framing.py",
+    "research/spinopelvic/tools/normalize_model_predictions.py",
     "research/spinopelvic/colab/spinopelvic_training.ipynb",
 ]
 WEIGHTS = [
@@ -67,7 +89,7 @@ def main() -> int:
         "pipeline_components_still_missing": pending_missing,
         "checkpoint_file_status": lfs,
         "scaffold_complete": not missing_present and not pending_missing,
-        "note": "File presence is not proof of strict checkpoint loading, training correctness or clinical validity.",
+        "note": "File presence is not proof of strict checkpoint loading, training correctness or clinical validity. A missing source_bundle/contents path means the local source-only archive has not yet been imported.",
     }
     print(json.dumps(report, indent=2))
     return 0 if report["scaffold_complete"] else 1
