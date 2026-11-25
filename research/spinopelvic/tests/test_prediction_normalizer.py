@@ -11,7 +11,7 @@ from jsonschema import Draft202012Validator
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 sys.path.insert(0, str(ROOT / "analysis"))
-from normalize_model_predictions import _apply_hrnet, _apply_s1  # noqa: E402
+from normalize_model_predictions import _apply_hrnet, _apply_s1, _restore_crop_mask  # noqa: E402
 from validate_annotations import validate_record  # noqa: E402
 from compute_measurements_from_annotations import _point  # noqa: E402
 
@@ -41,6 +41,24 @@ class PredictionNormalizerTests(unittest.TestCase):
         self.assertEqual(record["landmarks"]["L1_SA"]["model_score"], 0.2)
         self.assertEqual(record["landmarks"]["L1_SP"]["model_point"], [20.0, 12.0])
         self.assertEqual(list(VALIDATOR.iter_errors(record)), [])
+
+    def test_hrnet_crop_points_are_restored_to_original_image_coordinates(self):
+        record = model_template()
+        frame = {"window": [100, 200, 300, 400]}
+        _apply_hrnet(record, {"landmarks": {"L1_SA": [10, 20]}, "conf": {"L1_SA": 0.8}}, 0.5, frame)
+        self.assertEqual(record["landmarks"]["L1_SA"]["model_point"], [110.0, 220.0])
+        self.assertEqual(list(VALIDATOR.iter_errors(record)), [])
+
+    def test_crop_mask_is_inserted_back_into_original_image_frame(self):
+        import numpy as np
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "mask.png"
+            crop = np.ones((2, 3), dtype=np.uint8)
+            Image.fromarray(crop).save(path)
+            restored = _restore_crop_mask(path, {"window": [1, 2, 4, 4]}, (5, 6))
+            self.assertEqual(restored.shape, (5, 6))
+            self.assertEqual(int(restored[2:4, 1:4].sum()), 6)
+            self.assertEqual(int(restored.sum()), 6)
 
     def test_s1_model_bbox_and_points_remain_separate_from_human_fields(self):
         record = model_template()
