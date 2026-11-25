@@ -135,10 +135,16 @@ def _load_gray_mask(path: Path, expected_shape: tuple[int, int]) -> np.ndarray:
     return array
 
 
-def _apply_hrnet(record: dict[str, Any], item: dict[str, Any] | None, min_raw_score: float) -> dict[str, Any]:
+def _apply_hrnet(record: dict[str, Any], item: dict[str, Any] | None, min_raw_score: float, frame: dict[str, Any] | None = None) -> dict[str, Any]:
     if item is None:
         return {"predicted": 0, "accepted": 0, "rejected_below_score": 0, "raw_points": {}}
     width, height = record["image"]["width_px"], record["image"]["height_px"]
+    if frame is not None:
+        left, top, right, bottom = map(int, frame["window"])
+        prediction_width, prediction_height = right - left, bottom - top
+    else:
+        left = top = 0
+        prediction_width, prediction_height = width, height
     points = item.get("landmarks", {})
     scores = item.get("conf", {})
     accepted = rejected = 0
@@ -146,7 +152,8 @@ def _apply_hrnet(record: dict[str, Any], item: dict[str, Any] | None, min_raw_sc
     for name in HRNET_NAMES:
         if name not in points:
             continue
-        point = _finite_point(points[name], width, height, f"HRNet {name}")
+        crop_point = _finite_point(points[name], prediction_width, prediction_height, f"HRNet {name}")
+        point = [crop_point[0] + left, crop_point[1] + top] if crop_point is not None else None
         score = _finite_score(scores.get(name), f"HRNet {name}")
         use_point = point is not None and (score is None and min_raw_score <= 0 or score is not None and score >= min_raw_score)
         landmark = record["landmarks"][name]
