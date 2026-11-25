@@ -134,6 +134,7 @@ See [recovered kits](recovered_kits/README.md) for the three user-supplied fine-
 - tools/train_femoral_unet.py — new femoral-union fine-tuning recipe aligned to the source preprocessing path.
 - tools/export_custom_checkpoint.py — strict-load, ONNX graph check and synthetic-input PyTorch/ONNX parity.
 - tools/validate_end_to_end_framing.py — synthetic S1 crop, inverse point/mask and reframe acceptance checks.
+- tools/validate_synthetic_s1_search.py — exercises the full locate/search/fixed-point selection path with a deterministic synthetic scorer; not a trained detector test.
 - .github/workflows/spinopelvic-research-tests.yml — synthetic-only regression tests.
 
 The research utilities write to secure local output paths outside the Git repository. The 100-case locked test is excluded by default and must only be opened after protocol and model-selection freeze. Model outputs are normalized into a separate prediction annotation record; raw model coordinates/scores never overwrite human-reviewed annotations.
