@@ -23,6 +23,7 @@ PRESENT = [
     "research/spinopelvic/tests/test_annotation_schema.py",
     "research/spinopelvic/tests/test_research_pipeline.py",
     "research/spinopelvic/tests/test_reference_measurements_schema.py",
+    "research/spinopelvic/tests/test_prediction_normalizer.py",
     "research/spinopelvic/tools/validate_annotations.py",
     "research/spinopelvic/tools/make_annotation_templates.py",
     "research/spinopelvic/tools/prepare_splits.py",
