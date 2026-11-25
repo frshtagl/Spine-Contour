@@ -72,7 +72,7 @@ The public repository includes the lumbar model architectures/checkpoints and in
 - Added synthetic regression tests and a GitHub Actions workflow for this research branch.
 - Updated the recovered-kit policy to respect the user's instruction: no checkpoint weights are re-uploaded or duplicated. Existing baseline Git LFS paths remain untouched; recovered HRNet/S1 variants remain local.
 - Repository remains public. Only code, schemas, docs and synthetic tests are committed. No study cohort data, DICOMs, masks, annotations, patient-level manifests, fine-tuned checkpoints or clinical results were added.
-- Local synthetic test suite: 9 tests passed; Python syntax compilation passed for the new research utilities.
+- GitHub Actions synthetic research suite: 19 tests passed on commit 0d850002954aa9427de4d03e04eee197bc7c85a9 ([run](https://github.com/frshtagl/Spine-Contour/actions/runs/45559482964)). The Pillow deprecation warnings were removed in subsequent commits; rerun CI after those final edits.
 - No real study radiographs were accessed in this continuation, no LFS tensor checkpoint was strict-loaded, no training run was performed and no clinical validation is claimed.
 
 ## Remaining work
