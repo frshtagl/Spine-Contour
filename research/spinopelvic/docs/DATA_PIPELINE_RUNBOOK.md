@@ -92,10 +92,11 @@ The builder creates:
 - femoral/images + femoral/masks + femoral/val_names.txt
 - hrnet/images + train/validation 22-landmark JSON files
 - s1/images + train/validation S1 keypoint JSON files
+- geometry/reference_geometry_train.json and geometry/reference_geometry_validation.json, preserving the two expert femoral centres separately from HRNet's 22 channels
 
 It verifies source-file hashes and image dimensions. Raster images are copied byte-for-byte. Single-frame grayscale DICOM is decoded with the parent app's slope/intercept and MONOCHROME1 inversion, then saved as float TIFF for the PIL-based training kits; the annotation hash still verifies the original DICOM bytes.
 
-It excludes U-Net examples with any L1–L5 status still not_placed; explicit not_visible is treated as background. The locked test set is excluded by default. The builder refuses to merge into a non-empty output directory.
+It excludes U-Net examples with any L1–L5 status still not_placed; explicit not_visible is treated as background. The locked test set is excluded by default. The builder refuses to merge into a non-empty output directory and records a per-file output SHA-256 manifest plus an aggregate dataset fingerprint. It preserves original-image coordinates; end-to-end S1-relative crop/inverse-coordinate validation remains a separate pending test.
 
 Only after the statistical analysis plan and model choices are frozen should the test references be prepared separately:
 
@@ -146,7 +147,7 @@ python research/spinopelvic/tools/train_femoral_unet.py \
   --seed 2026
 ~~~
 
-These runs initialize from the original fork checkpoints. Do not chain one fine-tune into another unless that is a separately pre-registered experiment. The recovered U-Net/HRNet/S1 scripts contain historical training assumptions; compare the unchanged source baseline on the same validation cohort and report all new hyperparameters. The femoral script is a new research recipe, not the original hidden recipe.
+These runs initialize from the original fork checkpoints. Do not chain one fine-tune into another unless that is a separately pre-registered experiment. The recovered U-Net/HRNet/S1 scripts contain historical training assumptions; compare the unchanged source baseline on the same validation cohort and report all new hyperparameters. The femoral script is a new research recipe, not the original hidden recipe. Its validation Dice/IoU are computed on positive-reference cases only; empty-reference specificity is reported separately so negative-only images cannot inflate the positive Dice score.
 
 ## 6. Geometry and agreement analysis
 
