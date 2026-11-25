@@ -54,12 +54,36 @@ def validate_record(record: dict[str, Any], validator: Any) -> list[str]:
                         f"point {point!r} is outside the {width}x{height} image frame"
                     )
 
+    s1_detection = record.get("s1_detection", {})
+    bbox = s1_detection.get("bbox")
+    if bbox is not None:
+        if (
+            not isinstance(bbox, list)
+            or len(bbox) != 4
+            or not all(isinstance(v, (int, float)) for v in bbox)
+            or bbox[0] < 0
+            or bbox[1] < 0
+            or bbox[2] > width
+            or bbox[3] > height
+            or bbox[2] <= bbox[0]
+            or bbox[3] <= bbox[1]
+        ):
+            errors.append(
+                f"s1_detection.bbox: box {bbox!r} is invalid or outside the {width}x{height} image frame"
+            )
+
     for landmark_name, landmark in record.get("landmarks", {}).items():
         point = landmark.get("point")
         if point is not None and not in_bounds(point):
             errors.append(
                 f"landmarks.{landmark_name}.point: "
                 f"point {point!r} is outside the {width}x{height} image frame"
+            )
+        model_point = landmark.get("model_point")
+        if model_point is not None and not in_bounds(model_point):
+            errors.append(
+                f"landmarks.{landmark_name}.model_point: "
+                f"point {model_point!r} is outside the {width}x{height} image frame"
             )
     return errors
 
