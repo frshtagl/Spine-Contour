@@ -128,7 +128,8 @@ See [recovered kits](recovered_kits/README.md) for the three user-supplied fine-
 - tools/validate_annotations.py — checks schema, bounds, polygon area/self-intersection and model/corrected geometry.
 - tools/prepare_splits.py — exact-count patient-disjoint 240/60/100 split; fails on patient overlap or impossible group allocation.
 - tools/build_training_inputs.py — validates source hashes/dimensions, rasterizes masks, adapts the 22-channel HRNet and S1 training JSONs, and physically separates locked-test inputs.
-- tools/normalize_model_predictions.py — converts recovered HRNet/S1 predictions and U-Net masks into model_point/model_bbox/model_polygons while keeping human-reviewed fields separate.
+- tools/make_source_frames.py — uses the parent app's exact S1 reframe/fallback functions to create crop-frame U-Net/HRNet/femoral inputs; S1 detector data remain unframed.
+- tools/normalize_model_predictions.py — converts recovered HRNet/S1 predictions and U-Net/femoral crop masks back into original-image model_point/model_bbox/model_polygons while keeping human-reviewed fields separate.
 - tools/compute_measurements_from_annotations.py — calls the fork's existing spinopelvic geometry function, including model-point records.
 - analysis/analyze_agreement.py — coverage, MAE, bias, RMSE, Bland–Altman, ICC(A,1) and patient-cluster bootstrap CIs.
 - tools/train_femoral_unet.py — new femoral-union fine-tuning recipe aligned to the source preprocessing path.
