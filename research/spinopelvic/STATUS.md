@@ -56,3 +56,31 @@ The public repository includes the lumbar model architectures/checkpoints and in
 - Repository visibility was rechecked: still public. No patient-level data, sample images, masks, annotations or recovered checkpoint binaries were committed.
 - The source-only archive remains in the user's ChatGPT Library until the fork is private and kit-specific provenance/licensing is reviewed.
 - No checkpoint tensor loading, model training, test evaluation or clinical validation was performed.
+
+
+## 2026-11-25 — research pipeline continuation (supersedes earlier scaffold status)
+
+- Added a coded annotation-template generator and strengthened validation to check polygon area, self-intersection, model geometry and image-frame bounds.
+- Corrected an important source-derived detail: the parent app hashes the exact original file bytes, not decoded greyscale pixels. The protocol, exact-strategy document and annotation schema now say so.
+- Added single-frame grayscale DICOM support matching backend/server.py: RescaleSlope/RescaleIntercept and MONOCHROME1 inversion; DICOM PixelSpacing is mapped into x/y order. Model inputs are written as float TIFF while the manifest hash remains tied to the original DICOM bytes.
+- Added deterministic patient-disjoint split generation with exact 240/60/100 counts, patient-group leakage checks, exact subset-sum validation allocation and frozen manifest hashes.
+- Added a schema-checked dataset builder for vertebral U-Net, femoral U-Net, 22-channel HRNet and S1 Keypoint R-CNN. It excludes incomplete U-Net masks, preserves not_placed versus not_visible, verifies source image hashes/dimensions and physically separates optional locked-test inputs.
+- Added source-compatible measurement extraction through backend.utils.spinopelvic_measurements_from_geometry.
+- Added agreement reporting for coverage, MAE, median absolute error, bias, RMSE, Bland–Altman limits, ICC(A,1) and patient-cluster bootstrap confidence intervals.
+- Added a femoral U-Net training entry point aligned to the parent preprocessing path and a custom-checkpoint ONNX exporter with strict state loading, graph checking and synthetic-input parity checks.
+- Added reference-measurement and split-manifest schemas, experiment configuration/log templates, model cards, protocol decision register and a local source-bundle importer.
+- Added synthetic regression tests and a GitHub Actions workflow for this research branch.
+- Updated the recovered-kit policy to respect the user's instruction: no checkpoint weights are re-uploaded or duplicated. Existing baseline Git LFS paths remain untouched; recovered HRNet/S1 variants remain local.
+- Repository remains public. Only code, schemas, docs and synthetic tests are committed. No study cohort data, DICOMs, masks, annotations, patient-level manifests, fine-tuned checkpoints or clinical results were added.
+- Local synthetic test suite: 9 tests passed; Python syntax compilation passed for the new research utilities.
+- No real study radiographs were accessed in this continuation, no LFS tensor checkpoint was strict-loaded, no training run was performed and no clinical validation is claimed.
+
+## Remaining work
+
+1. Import the source-only recovered-kit archive locally with tools/import_source_bundle.sh (no weights are imported).
+2. Run the branch CI and the synthetic tests on the user's local clone.
+3. Strict-load the actual local baseline and recovered HRNet/S1 checkpoints; compare model state keys/shapes and resolve any incompatibility before training.
+4. Add end-to-end tests for S1 crop/framing and coordinate transforms, plus a normalized model-prediction-to-measurement bridge.
+5. Freeze the approved protocol, reader/adjudication plan and seed; generate the real patient-disjoint split in secure storage.
+6. Run a small approved pilot, then development-only training/selection. Open the locked test only once after all thresholds, QC and analysis are frozen.
+7. Colab orchestration remains optional and must not be used unless the institution/site explicitly approves the proposed de-identified data transfer and processing.
