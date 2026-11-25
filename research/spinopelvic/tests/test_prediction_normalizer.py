@@ -3,16 +3,17 @@ from __future__ import annotations
 import copy
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 sys.path.insert(0, str(ROOT / "analysis"))
 from normalize_model_predictions import _apply_hrnet, _apply_s1, _restore_crop_mask  # noqa: E402
-from validate_annotations import validate_record  # noqa: E402
 from compute_measurements_from_annotations import _point  # noqa: E402
 
 SCHEMA = json.loads((ROOT / "schemas" / "annotation.schema.json").read_text(encoding="utf-8"))
