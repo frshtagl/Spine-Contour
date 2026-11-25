@@ -46,6 +46,31 @@ def load_prediction_map(path: Path | None) -> dict[str, dict[str, Any]]:
     return result
 
 
+def load_frame_manifest(path: Path | None) -> dict[str, dict[str, Any]]:
+    if path is None:
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if data.get("schema_version") != "spinecontour-spinopelvic.frame-manifest/1" or not isinstance(data.get("studies"), list):
+        raise ValueError("Invalid source-frame manifest")
+    frames = {}
+    for item in data["studies"]:
+        sid = str(item.get("study_id") or "")
+        if not sid or sid in frames:
+            raise ValueError(f"Missing/duplicate study_id in frame manifest: {sid!r}")
+        frames[sid] = item
+    return frames
+
+
+def _restore_crop_mask(path: Path, frame: dict[str, Any] | None, original_shape: tuple[int, int]) -> np.ndarray:
+    if frame is None:
+        return _load_gray_mask(path, original_shape)
+    left, top, right, bottom = map(int, frame["window"])
+    crop = _load_gray_mask(path, (bottom - top, right - left))
+    full = np.zeros(original_shape, dtype=crop.dtype)
+    full[top:bottom, left:right] = crop
+    return full
+
+
 def _finite_point(value: Any, width: int, height: int, label: str) -> list[float] | None:
     if value is None:
         return None
@@ -229,6 +254,7 @@ def main() -> int:
     parser.add_argument("--model-name", required=True)
     parser.add_argument("--model-version", required=True)
     parser.add_argument("--component-manifest", type=Path, help="Optional JSON with component checkpoint hashes")
+    parser.add_argument("--frame-manifest", type=Path, help="Optional make_source_frames.py manifest; restores cropped model outputs to original image coordinates")
     parser.add_argument("--hrnet-raw-score-min", type=float, default=0.0, help="Pre-registered minimum raw HRNet heatmap peak; not a probability")
     parser.add_argument("--s1-score-min", type=float, default=0.0, help="Pre-registered minimum S1 detector score")
     parser.add_argument("--min-femoral-fit-confidence", type=float, default=0.0)
@@ -262,6 +288,7 @@ def main() -> int:
         image_index = index_images(args.images)
         hrnet_map = load_prediction_map(args.hrnet_predictions)
         s1_map = load_prediction_map(args.s1_predictions)
+        frame_map = load_frame_manifest(args.frame_manifest)
         base_files = sorted(args.base_annotations.rglob("*.json"))
         if not base_files:
             raise ValueError("No base annotation templates found")
@@ -287,21 +314,40 @@ def main() -> int:
             record = _base_record(path, args.model_name, args.model_version)
             base_used.append(path)
             model_file = _map_model_filename(sid, source)
-            qc = {"study_id": sid, "image_sha256": digest, "model_file": model_file, "components": {}}
-            qc["components"]["hrnet_points"] = _apply_hrnet(record, hrnet_map.get(model_file) or hrnet_map.get(source.name), args.hrnet_raw_score_min)
-            qc["components"]["s1_detected"] = _apply_s1(record, s1_map.get(model_file) or s1_map.get(source.name), args.s1_score_min)
+            frame = frame_map.get(sid)
+            if args.frame_manifest and frame is None:
+                raise ValueError(f"Frame manifest has no entry for study {sid}")
+            if frame is not None:
+                if frame.get("image_sha256", "").lower() != digest:
+                    raise ValueError(f"Frame manifest image hash differs for study {sid}")
+                if (frame.get("original_width_px"), frame.get("original_height_px")) != (record["image"]["width_px"], record["image"]["height_px"]):
+                    raise ValueError(f"Frame manifest dimensions differ for study {sid}")
+                left, top, right, bottom = map(int, frame["window"])
+                if not (0 <= left < right <= record["image"]["width_px"] and 0 <= top < bottom <= record["image"]["height_px"]):
+                    raise ValueError(f"Frame manifest window is outside the source image for study {sid}")
+                framed_file = str(frame["framed_file"])
+                s1_file = str(frame.get("s1_file") or model_file)
+            else:
+                framed_file = model_file
+                s1_file = model_file
+            qc = {"study_id": sid, "image_sha256": digest, "model_file": model_file, "framed_file": framed_file,
+                  "frame_window": frame.get("window") if frame else None, "components": {}}
+            hrnet_item = hrnet_map.get(framed_file) if frame else (hrnet_map.get(model_file) or hrnet_map.get(source.name))
+            s1_item = s1_map.get(s1_file) if frame else (s1_map.get(model_file) or s1_map.get(source.name))
+            qc["components"]["hrnet_points"] = _apply_hrnet(record, hrnet_item, args.hrnet_raw_score_min, frame)
+            qc["components"]["s1_detected"] = _apply_s1(record, s1_item, args.s1_score_min)
             if args.vertebra_mask_dir:
-                mask_path = _find_mask(args.vertebra_mask_dir, model_file, source)
+                mask_path = _find_mask(args.vertebra_mask_dir, framed_file, source)
                 if mask_path is not None:
-                    mask = _load_gray_mask(mask_path, (record["image"]["height_px"], record["image"]["width_px"]))
+                    mask = _restore_crop_mask(mask_path, frame, (record["image"]["height_px"], record["image"]["width_px"]))
                     qc["components"]["vertebra"] = _apply_vertebra_mask(record, mask)
                     qc["components"]["vertebra"]["mask_sha256"] = sha256_file(mask_path)
                 else:
                     qc["components"]["vertebra"] = {"missing": True}
             if args.femoral_mask_dir:
-                mask_path = _find_mask(args.femoral_mask_dir, model_file, source)
+                mask_path = _find_mask(args.femoral_mask_dir, framed_file, source)
                 if mask_path is not None:
-                    mask = _load_gray_mask(mask_path, (record["image"]["height_px"], record["image"]["width_px"]))
+                    mask = _restore_crop_mask(mask_path, frame, (record["image"]["height_px"], record["image"]["width_px"]))
                     fit_qc = _apply_femoral_mask(record, mask, args.min_femoral_fit_confidence, args.min_femoral_iou)
                     fit_qc["mask_sha256"] = sha256_file(mask_path)
                     qc["components"]["femoral"] = fit_qc
@@ -328,6 +374,7 @@ def main() -> int:
             "inputs": {
                 "hrnet_predictions_sha256": sha256_file(args.hrnet_predictions) if args.hrnet_predictions else None,
                 "s1_predictions_sha256": sha256_file(args.s1_predictions) if args.s1_predictions else None,
+                "frame_manifest_sha256": sha256_file(args.frame_manifest) if args.frame_manifest else None,
             },
             "score_thresholds": {"hrnet_raw_score_min": args.hrnet_raw_score_min, "s1_score_min": args.s1_score_min},
             "femoral_fit_thresholds": {"fit_confidence_min": args.min_femoral_fit_confidence, "iou_min": args.min_femoral_iou},
