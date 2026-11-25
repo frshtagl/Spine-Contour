@@ -71,6 +71,21 @@ def _restore_crop_mask(path: Path, frame: dict[str, Any] | None, original_shape:
     return full
 
 
+def load_femoral_prediction_manifest(path: Path | None) -> dict[str, dict[str, Any]]:
+    if path is None:
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if data.get("schema_version") != "spinecontour-spinopelvic.femoral-predictions/1" or not isinstance(data.get("images"), list):
+        raise ValueError("Invalid femoral prediction manifest")
+    rows = {}
+    for item in data["images"]:
+        filename = str(item.get("file") or "")
+        if not filename or filename in rows:
+            raise ValueError(f"Missing/duplicate femoral prediction filename: {filename!r}")
+        rows[filename] = item
+    return rows
+
+
 def _finite_point(value: Any, width: int, height: int, label: str) -> list[float] | None:
     if value is None:
         return None
@@ -268,6 +283,7 @@ def main() -> int:
     parser.add_argument("--component-manifest", type=Path, help="Optional JSON with component checkpoint hashes")
     parser.add_argument("--frame-manifest", type=Path, help="Optional make_source_frames.py manifest; restores cropped model outputs to original image coordinates")
     parser.add_argument("--framed-images", type=Path, help="Framed HRNet image directory; verifies each crop SHA-256 against the frame manifest")
+    parser.add_argument("--femoral-prediction-manifest", type=Path, help="Optional predict_femoral_unet.py manifest for mask/checkpoint hash verification")
     parser.add_argument("--hrnet-raw-score-min", type=float, default=0.0, help="Pre-registered minimum raw HRNet heatmap peak; not a probability")
     parser.add_argument("--s1-score-min", type=float, default=0.0, help="Pre-registered minimum S1 detector score")
     parser.add_argument("--min-femoral-fit-confidence", type=float, default=0.0)
@@ -302,6 +318,7 @@ def main() -> int:
         hrnet_map = load_prediction_map(args.hrnet_predictions)
         s1_map = load_prediction_map(args.s1_predictions)
         frame_map = load_frame_manifest(args.frame_manifest)
+        femoral_prediction_map = load_femoral_prediction_manifest(args.femoral_prediction_manifest)
         uses_crop_components = bool(args.hrnet_predictions or args.vertebra_mask_dir or args.femoral_mask_dir)
         if args.frame_manifest and uses_crop_components and not args.framed_images:
             raise ValueError("--framed-images is required when normalizing crop-frame HRNet/U-Net/femoral outputs with a frame manifest")
@@ -399,6 +416,7 @@ def main() -> int:
                 "s1_predictions_sha256": sha256_file(args.s1_predictions) if args.s1_predictions else None,
                 "frame_manifest_sha256": sha256_file(args.frame_manifest) if args.frame_manifest else None,
                 "framed_input_directory_supplied": bool(args.framed_images),
+                "femoral_prediction_manifest_sha256": sha256_file(args.femoral_prediction_manifest) if args.femoral_prediction_manifest else None,
             },
             "score_thresholds": {"hrnet_raw_score_min": args.hrnet_raw_score_min, "s1_score_min": args.s1_score_min},
             "femoral_fit_thresholds": {"fit_confidence_min": args.min_femoral_fit_confidence, "iou_min": args.min_femoral_iou},
