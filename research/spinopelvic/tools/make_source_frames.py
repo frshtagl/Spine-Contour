@@ -45,7 +45,10 @@ def crop_window(record: dict[str, Any], image: np.ndarray) -> tuple[tuple[int, i
         proposed = framing.reframe(np.asarray([sa, sp], dtype=np.float64), image.shape)
         if proposed is not None:
             return tuple(int(v) for v in proposed), "s1_reframe"
-    return tuple(int(v) for v in framing.fallback_window(image)), "fallback_window"
+    fallback = framing.fallback_window(image)
+    if fallback is None:
+        raise ValueError("Parent fallback framing did not return a crop window")
+    return tuple(int(v) for v in fallback), "fallback_window"
 
 
 def save_tiff(array: np.ndarray, path: Path) -> None:
@@ -83,6 +86,7 @@ def main() -> int:
         args.out.mkdir(parents=True, exist_ok=True)
         splits = ["train", "validation"] + (["test_reference"] if args.include_test_reference else [])
         all_frames = []
+        seen_framed_files = set()
         validation_names = {"vertebra": [], "femoral": []}
         for split in splits:
             base = args.dataset / "test_reference" if split == "test_reference" else args.dataset
@@ -107,6 +111,9 @@ def main() -> int:
                 if crop.size == 0:
                     raise ValueError(f"Empty framed crop for {study['study_id']}")
                 framed_file = f"{Path(original_file).stem}.tiff"
+                if framed_file in seen_framed_files:
+                    raise ValueError(f"Framed filename collision: {framed_file}")
+                seen_framed_files.add(framed_file)
                 framed_image_path = args.out / "hrnet" / "images" / framed_file
                 save_tiff(crop, framed_image_path)
                 frame = {
