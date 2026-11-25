@@ -296,6 +296,7 @@ def build(records: list[dict[str, Any]], image_index: dict[str, Path], splits: d
                 copy_training_image(source, s1_dst)
             hrnet_item, s1_item = make_model_item(rec, file_name)
             fh1, fh2 = point_for(rec, "FH1_CENTER"), point_for(rec, "FH2_CENTER")
+            s1_sa, s1_sp = point_for(rec, "S1_SA"), point_for(rec, "S1_SP")
             reference_geometry_items.append({
                 "study_id": sid,
                 "patient_group_code": rec["annotation"]["patient_group_code"],
@@ -303,6 +304,8 @@ def build(records: list[dict[str, Any]], image_index: dict[str, Path], splits: d
                 "stage": rec["annotation"]["stage"],
                 "file": file_name,
                 "image_sha256": digest,
+                "anterior_side": rec["image"].get("anterior_side", "unknown"),
+                "s1_endplate": {"SA": s1_sa, "SP": s1_sp},
                 "femoral_centres": {"FH1_CENTER": fh1, "FH2_CENTER": fh2},
                 "femoral_centres_complete": fh1 is not None and fh2 is not None,
             })
