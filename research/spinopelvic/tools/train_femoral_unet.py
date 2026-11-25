@@ -47,10 +47,16 @@ def checkpoint_state(checkpoint: Any, default_encoder: str = "resnet34") -> tupl
     if isinstance(checkpoint, dict):
         encoder = str(checkpoint.get("encoder", default_encoder))
         for key in ("model", "model_state_dict", "state_dict"):
-            if isinstance(checkpoint.get(key), dict):
-                return checkpoint[key], encoder
+            state = checkpoint.get(key)
+            if isinstance(state, dict):
+                if state and all(str(k).startswith("module.") for k in state):
+                    state = {str(k)[7:]: value for k, value in state.items()}
+                return state, encoder
         if checkpoint and all(isinstance(k, str) for k in checkpoint):
-            return checkpoint, encoder
+            state = checkpoint
+            if all(str(k).startswith("module.") for k in state):
+                state = {str(k)[7:]: value for k, value in state.items()}
+            return state, encoder
     raise ValueError("Checkpoint does not contain a usable state dictionary")
 
 
