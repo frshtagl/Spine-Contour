@@ -30,6 +30,8 @@ PRESENT = [
     "research/spinopelvic/tools/compute_measurements_from_annotations.py",
     "research/spinopelvic/tools/train_femoral_unet.py",
     "research/spinopelvic/tools/export_custom_checkpoint.py",
+    "research/spinopelvic/tools/normalize_model_predictions.py",
+    "research/spinopelvic/tools/validate_end_to_end_framing.py",
     "research/spinopelvic/tools/import_source_bundle.sh",
     "research/spinopelvic/tools/inspect_checkpoints.py",
     "research/spinopelvic/analysis/analyze_agreement.py",
@@ -51,8 +53,12 @@ PENDING = [
     "research/spinopelvic/recovered_kits/source_bundle/contents/vertebra_unet_finetune/train.py",
     "research/spinopelvic/recovered_kits/source_bundle/contents/hrnet_landmarks_finetune/train.py",
     "research/spinopelvic/recovered_kits/source_bundle/contents/s1_finetune/train.py",
-    "research/spinopelvic/tools/validate_end_to_end_framing.py",
-    "research/spinopelvic/tools/normalize_model_predictions.py",
+    "research/spinopelvic/tools/validate_predicted_s1_framing.py",
+    "research/spinopelvic/recovered_kits/source_bundle/contents/vertebra_unet_finetune/train.py",
+    "research/spinopelvic/recovered_kits/source_bundle/contents/hrnet_landmarks_finetune/train.py",
+    "research/spinopelvic/recovered_kits/source_bundle/contents/s1_finetune/train.py",
+]
+OPTIONAL = [
     "research/spinopelvic/colab/spinopelvic_training.ipynb",
 ]
 WEIGHTS = [
@@ -72,6 +78,8 @@ def main() -> int:
     missing_present = [path for path in PRESENT if not (root / path).is_file()]
     pending_present = [path for path in PENDING if (root / path).is_file()]
     pending_missing = [path for path in PENDING if not (root / path).is_file()]
+    optional_present = [path for path in OPTIONAL if (root / path).is_file()]
+    optional_missing = [path for path in OPTIONAL if not (root / path).is_file()]
     lfs = {}
     for relative in WEIGHTS:
         path = root / relative
@@ -87,9 +95,11 @@ def main() -> int:
         "missing_expected_research_files": missing_present,
         "pipeline_components_present": pending_present,
         "pipeline_components_still_missing": pending_missing,
+        "optional_components_present": optional_present,
+        "optional_components_missing": optional_missing,
         "checkpoint_file_status": lfs,
         "scaffold_complete": not missing_present and not pending_missing,
-        "note": "File presence is not proof of strict checkpoint loading, training correctness or clinical validity. A missing source_bundle/contents path means the local source-only archive has not yet been imported.",
+        "note": "File presence is not proof of strict checkpoint loading, training correctness or clinical validity. A missing source_bundle/contents path means the local source-only archive has not yet been imported. The Colab notebook is optional and requires site approval before any patient-data transfer.",
     }
     print(json.dumps(report, indent=2))
     return 0 if report["scaffold_complete"] else 1
