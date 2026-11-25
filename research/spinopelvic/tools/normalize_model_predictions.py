@@ -319,6 +319,8 @@ def main() -> int:
         s1_map = load_prediction_map(args.s1_predictions)
         frame_map = load_frame_manifest(args.frame_manifest)
         femoral_prediction_map = load_femoral_prediction_manifest(args.femoral_prediction_manifest)
+        if args.femoral_prediction_manifest and not args.femoral_mask_dir:
+            raise ValueError("--femoral-prediction-manifest requires --femoral-mask-dir")
         uses_crop_components = bool(args.hrnet_predictions or args.vertebra_mask_dir or args.femoral_mask_dir)
         if args.frame_manifest and uses_crop_components and not args.framed_images:
             raise ValueError("--framed-images is required when normalizing crop-frame HRNet/U-Net/femoral outputs with a frame manifest")
