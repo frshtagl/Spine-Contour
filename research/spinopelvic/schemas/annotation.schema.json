@@ -228,6 +228,13 @@
               "type": "null"
             }
           ]
+        },
+        "model_score": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Raw detector score; interpret using the model-specific validation protocol."
         }
       },
       "allOf": [
@@ -581,6 +588,13 @@
             "string",
             "null"
           ]
+        },
+        "model_score": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Raw model score/heatmap peak; not necessarily calibrated as a probability."
         }
       },
       "allOf": [
