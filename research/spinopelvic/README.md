@@ -99,14 +99,15 @@ The synopsis requires site-specific approval for cross-institutional transfer an
 
 ## Current milestone
 
-- Research workspace and initial annotation tools are present.
-- Spine-Contour-compatible architecture and synopsis amendments are documented.
-- The revised annotation schema now supports the source architecture's mask and landmark targets.
-- Dataset builder, training loops, evaluation scripts, Colab notebook and custom ONNX exporter remain to be implemented.
-- No training, test evaluation or accuracy claim has been made.
+- Architecture alignment, synopsis recommendations and the research annotation schema are documented.
+- Annotation template generation, schema/polygon validation, patient-disjoint split generation and model-specific dataset construction are implemented.
+- The dataset builder supports raster images and single-frame grayscale DICOM using the parent application's slope/intercept and MONOCHROME1 behavior.
+- Source-compatible geometry extraction, agreement statistics, a new femoral U-Net fine-tuning entry point and custom-checkpoint ONNX export are implemented.
+- Synthetic tests and branch-specific CI are added.
+- Recovered U-Net/HRNet/S1 trainers remain in the source-only archive in the user's Library/local storage; import them locally with the committed hash-verifying script.
+- No real study data were accessed, no checkpoint tensor was strict-loaded, no training was run and no clinical accuracy claim has been made.
 
-Next: approve the synopsis/SOP, retrieve and inspect the actual LFS checkpoints, validate the annotations on a small approved pilot, and implement the deterministic dataset builder.
-
+Next: import the source-only kit locally, run CI, strict-load the existing local checkpoints, obtain protocol/reader approval, pilot the annotations and then freeze the real patient-disjoint split.
 
 ## Repository branch and audit note
 
