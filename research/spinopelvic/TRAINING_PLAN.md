@@ -29,10 +29,10 @@ Implemented in tools/make_annotation_templates.py, tools/validate_annotations.py
 - Rasterizes five mutually exclusive L1–L5 masks and the femoral union mask.
 - Creates HRNet heatmap targets for 22 landmarks.
 - Creates Keypoint R-CNN targets: S1 box plus two S1 keypoints.
-- Retains two femoral reference centres for two-disc fitter evaluation; they are not HRNet channels.
-- Reproduces the S1-relative crop, grayscale rescaling, letterbox, femoral CLAHE/resize and coordinate restoration.
-- Applies spatial augmentation identically to image, masks, boxes and keypoints.
-- Writes split-manifest and dataset hashes; test labels must not enter training loaders.
+- Writes both expert femoral centres to a separate geometry/reference_geometry_<split>.json file; they are not HRNet channels.
+- Preserves original-image coordinates and delegates resize/letterbox preprocessing to the model-specific source trainers. End-to-end S1 crop and inverse-coordinate restoration tests remain pending.
+- Spatial augmentation remains in the model-specific training code; verify that every image/mask/box/keypoint transform stays aligned.
+- Records the split-manifest hash and per-file output hashes/fingerprint in the secure dataset-build manifest; test labels must not enter training loaders.
 
 ## Phase 3 — Model A: U-Net segmentation route
 
