@@ -33,6 +33,12 @@ class AnnotationSchemaTests(unittest.TestCase):
         errors = validate_record(record, VALIDATOR)
         self.assertTrue(any("masks.L1.polygons" in error for error in errors))
 
+    def test_out_of_bounds_s1_box_is_rejected(self):
+        record = copy.deepcopy(EXAMPLE)
+        record["s1_detection"]["bbox"] = [335, 820, 1300, 900]
+        errors = validate_record(record, VALIDATOR)
+        self.assertTrue(any("s1_detection.bbox" in error for error in errors))
+
     def test_not_separable_femoral_centres_can_be_withheld_without_losing_union_mask(self):
         record = copy.deepcopy(EXAMPLE)
         record["landmarks"]["FH2_CENTER"] = {
