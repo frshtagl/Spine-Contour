@@ -1,5 +1,5 @@
 # Install from the repository root:
 #   python -m pip install -r research/spinopelvic/requirements-research.txt
--r ../../backend/requirements-export.txt
+-r backend/requirements-export.txt
 jsonschema>=4.22,<5
 PyYAML>=6.0,<7
