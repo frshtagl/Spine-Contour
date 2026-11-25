@@ -74,3 +74,18 @@ It did not run a real model training job, strict-load the original checkpoint te
 ## Privacy boundary
 
 Only source code, synthetic tests and approved non-identifying documentation belong in this public fork. Radiographs, DICOMs, patient-linked manifests, annotations, reader measurements, NPZ datasets, training logs, checkpoints and exported ONNX files must remain in approved private storage. Colab/cloud processing requires explicit written institutional and site approval.
+
+
+## Follow-up implementation update — 25 November 2026
+
+The table above is a historical snapshot of the branch at the original audit commit. Subsequent commits added:
+
+- patient-disjoint split generation and split-manifest schema;
+- annotation template generation and stronger polygon/coordinate validation;
+- image-hash-verified dataset building for vertebral U-Net, femoral U-Net, HRNet and S1;
+- single-frame grayscale DICOM decoding aligned to the parent server;
+- source-compatible geometry extraction and clustered-bootstrap agreement analysis;
+- femoral U-Net fine-tuning and custom-checkpoint ONNX export utilities;
+- synthetic tests, reference-measurement schema, experiment templates, model cards and branch CI.
+
+Still absent: imported source-only U-Net/HRNet/S1 training scripts in the branch tree (the verified archive remains in the user's Library/local PC), end-to-end S1 framing/coordinate tests, prediction-output normalization, Colab notebook and all real-data/checkpoint/training validation. No weights or study data were uploaded in the follow-up.
