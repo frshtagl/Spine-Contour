@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from pathlib import Path
 from typing import Any
@@ -99,6 +100,9 @@ def validate_record(record: dict[str, Any], validator: Any) -> list[str]:
 
     s1_detection = record.get("s1_detection", {})
     if isinstance(s1_detection, dict):
+        score = s1_detection.get("model_score")
+        if score is not None and (not isinstance(score, (int, float)) or isinstance(score, bool) or not math.isfinite(score)):
+            errors.append("s1_detection.model_score: expected a finite numeric score")
         for field in ("bbox", "model_bbox"):
             bbox = s1_detection.get(field)
             if bbox is not None:
@@ -113,6 +117,9 @@ def validate_record(record: dict[str, Any], validator: Any) -> list[str]:
         for landmark_name, landmark in landmarks.items():
             if not isinstance(landmark, dict):
                 continue
+            score = landmark.get("model_score")
+            if score is not None and (not isinstance(score, (int, float)) or isinstance(score, bool) or not math.isfinite(score)):
+                errors.append(f"landmarks.{landmark_name}.model_score: expected a finite numeric score")
             for field in ("point", "model_point"):
                 point = landmark.get(field)
                 if point is None:
