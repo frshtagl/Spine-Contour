@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "spinecontour-spinopelvic.reference-measurements/1",
+  "title": "Spine-Contour spinopelvic reader reference measurements",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "study_id", "image_sha256", "reader_code", "protocol_version", "stage", "measurements"],
+  "properties": {
+    "schema_version": {"const": "spinecontour-spinopelvic.reference-measurements/1"},
+    "study_id": {"type": "string", "minLength": 1},
+    "patient_group_code": {"type": ["string", "null"]},
+    "image_sha256": {"type": "string", "pattern": "^[a-fA-F0-9]{64}$"},
+    "reader_code": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,32}$"},
+    "protocol_version": {"type": "string", "minLength": 1},
+    "stage": {"enum": ["pilot", "development", "locked_test_reference"]},
+    "adjudicated": {"type": "boolean", "default": false},
+    "measurements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["PI", "PT", "SS", "LL_L1_S1"],
+      "properties": {
+        "PI": {"$ref": "#/$defs/measurement"},
+        "PT": {"$ref": "#/$defs/measurement"},
+        "SS": {"$ref": "#/$defs/measurement"},
+        "LL_L1_S1": {"$ref": "#/$defs/measurement"}
+      }
+    },
+    "comment": {"type": ["string", "null"], "maxLength": 2000}
+  },
+  "$defs": {
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "value_deg", "reason"],
+      "properties": {
+        "status": {"enum": ["measured", "not_assessable"]},
+        "value_deg": {"type": ["number", "null"], "minimum": 0, "maximum": 180},
+        "reason": {"type": ["string", "null"]}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "measured"}}, "required": ["status"]},
+          "then": {"properties": {"value_deg": {"type": "number"}, "reason": {"type": "null"}}}
+        },
+        {
+          "if": {"properties": {"status": {"const": "not_assessable"}}, "required": ["status"]},
+          "then": {"properties": {"value_deg": {"type": "null"}, "reason": {"type": "string", "minLength": 1}}}
+        }
+      ]
+    }
+  }
+}
