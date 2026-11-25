@@ -1,0 +1,43 @@
+{
+  "schema_version": "spinecontour-spinopelvic.checkpoint-manifest/1",
+  "experiment_id": "REPLACE_WITH_APPROVED_EXPERIMENT_ID",
+  "source_repository": "frshtagl/Spine-Contour",
+  "source_branch": "research/spinopelvic-lab",
+  "baseline_checkpoints": {
+    "vertebra_unet": {
+      "path": "backend/weights/vertebra_unet.pt",
+      "sha256": "RECORD_LOCAL_FILE_SHA256",
+      "bytes": null
+    },
+    "hrnet_landmarks": {
+      "path": "backend/weights/hrnet_landmarks.pt",
+      "sha256": "RECORD_LOCAL_FILE_SHA256",
+      "bytes": null
+    },
+    "s1_keypointrcnn": {
+      "path": "backend/weights/s1_keypointrcnn.pt",
+      "sha256": "RECORD_LOCAL_FILE_SHA256",
+      "bytes": null
+    },
+    "femoral_unet": {
+      "path": "backend/weights/femoral_unet.pt",
+      "sha256": "RECORD_LOCAL_FILE_SHA256",
+      "bytes": null
+    }
+  },
+  "selected_checkpoints": {
+    "vertebra_unet": null,
+    "hrnet_landmarks": null,
+    "s1_keypointrcnn": null,
+    "femoral_unet": null
+  },
+  "preprocessing_version": "RECORD_EXACT_PREPROCESSING_COMMIT_OR_TAG",
+  "thresholds": {
+    "hrnet_raw_score_min": null,
+    "s1_score_min": null,
+    "femoral_fit_confidence_min": null,
+    "femoral_iou_min": null,
+    "geometry_min_model_score": 0.0
+  },
+  "note": "Keep the completed manifest in secure local experiment storage if it contains study-level or private provenance. Do not commit trained weights or patient-linked data."
+}
