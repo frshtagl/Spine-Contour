@@ -1,0 +1,106 @@
+project:
+  name: spine-contour-spinopelvic
+  protocol_title: "Development and Internal Testing of a Reliability-Aware Deep Learning Framework for Estimating Spinopelvic Parameters on Standing Lateral Lumbopelvic Radiographs"
+  status: scaffold
+  source_repository: "https://github.com/frshtagl/Spine-Contour"
+  source_commit: "5df84e0af578e8faabab30b24e655735c3663ad4"
+
+endpoints:
+  angles:
+    - PI
+    - PT
+    - SS
+    - LL_L1_S1
+  required_landmarks:
+    - L1_SUP_ANT
+    - L1_SUP_POST
+    - S1_SUP_ANT
+    - S1_SUP_POST
+    - FH1_CENTER
+    - FH2_CENTER
+
+cohort:
+  total: 400
+  development: 300
+  locked_test: 100
+  split:
+    train: 240
+    validation: 60
+    test: 100
+  unit: one_examination_per_patient_preferred
+  patient_disjoint: true
+  stratify_by_site: preferred_where_feasible
+  test_locked: true
+  random_seed: pending_protocol_freeze
+
+annotation:
+  schema: "spinopelvic.annotation/0.1"
+  coordinate_frame: original_image_pixels
+  origin: top_left
+  x_axis: right
+  y_axis: down
+  polygon_masks: true
+  preserve_independent_femoral_heads: true
+  no_invented_centres_when_not_separable: true
+
+segmentation_targets:
+  # Provisional targets; confirm the final label map in the approved SOP.
+  labels:
+    0: background
+    1: L1
+    2: L2
+    3: L3
+    4: L4
+    5: L5
+    6: S1_SUPERIOR_ENDPLATE
+    7: FEMORAL_REGION_UNION
+  separate_annotation_objects:
+    - FEMORAL_HEAD_1
+    - FEMORAL_HEAD_2
+
+models:
+  model_a:
+    role: segmentation_to_geometry
+    synopsis_architecture: nnUNet_v2_2d
+    warm_start_candidate: SpineContour_SMP_ResNet34_UNet
+    architecture_decision: pending
+    note: "Existing SMP U-Net weights are not directly interchangeable with nnU-Net v2."
+  model_b:
+    role: direct_landmark_heatmaps
+    backbone: HRNet_W32
+    checkpoint: backend/weights/hrnet_landmarks.pt
+    existing_output_channels: 22
+    planned_output_channels: 24
+    added_channels:
+      - FH1_CENTER
+      - FH2_CENTER
+    status: planned_not_implemented
+  femoral_warm_start:
+    architecture: SpineContour_SMP_ResNet34_UNet
+    checkpoint: backend/weights/femoral_unet.pt
+    output_channels: 1
+    target: FEMORAL_REGION_UNION
+    separate_head_annotations_retained: true
+
+preprocessing:
+  source_of_truth:
+    - backend/models/models.py
+    - backend/framing.py
+  preserve_aspect_ratio: true
+  verify_forward_inverse_coordinate_parity: required
+  augmentation_only_in_training: true
+
+security:
+  repository_visibility: public
+  patient_data_in_git: prohibited
+  masks_in_git: prohibited
+  reference_readings_in_git: prohibited
+  checkpoints_in_public_git: prohibited
+  colab_requires_written_institutional_approval: true
+
+artifacts:
+  dataset_root: outside_repository
+  checkpoints_root: approved_secure_storage
+  run_logs: approved_secure_storage
+  aggregate_metrics_may_be_committed: true
+  model_weights_publication: requires_license_and_ethics_review
