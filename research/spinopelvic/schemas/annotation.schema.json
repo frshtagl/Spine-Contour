@@ -202,6 +202,32 @@
             "string",
             "null"
           ]
+        },
+        "model_bbox": {
+          "oneOf": [
+            {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "minItems": 4,
+              "maxItems": 4
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "allOf": [
@@ -248,6 +274,27 @@
             "properties": {
               "bbox": {
                 "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "edited"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "model_bbox": {
+                "type": "array",
+                "minItems": 4,
+                "maxItems": 4
               }
             }
           }
