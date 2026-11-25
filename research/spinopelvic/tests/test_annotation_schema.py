@@ -39,12 +39,13 @@ class AnnotationSchemaTests(unittest.TestCase):
         errors = validate_record(record, VALIDATOR)
         self.assertTrue(any("s1_detection.bbox" in error for error in errors))
 
-    def test_not_separable_femoral_centres_can_be_withheld_without_losing_union_mask(self):
+    def test_unplaced_femoral_centre_can_be_withheld_without_losing_union_mask(self):
         record = copy.deepcopy(EXAMPLE)
         record["landmarks"]["FH2_CENTER"] = {
             "status": "not_placed",
             "point": None,
-            "uncertainty": "not_assessable"
+            "uncertainty": "not_assessable",
+            "uncertainty_note": "Heads overlap; independent centre not supportable."
         }
         self.assertEqual(validate_record(record, VALIDATOR), [])
 
