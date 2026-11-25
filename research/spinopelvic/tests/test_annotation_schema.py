@@ -23,24 +23,28 @@ class AnnotationSchemaTests(unittest.TestCase):
 
     def test_out_of_bounds_landmark_is_rejected(self):
         record = copy.deepcopy(EXAMPLE)
-        record["landmarks"]["FH1_CENTER"]["point"] = [1000, 760]
+        record["landmarks"]["FH1_CENTER"]["point"] = [1200, 1010]
         errors = validate_record(record, VALIDATOR)
-        self.assertTrue(any("outside the 1000x1000 image frame" in error for error in errors))
+        self.assertTrue(any("outside the 1200x1400 image frame" in error for error in errors))
 
     def test_out_of_bounds_mask_vertex_is_rejected(self):
         record = copy.deepcopy(EXAMPLE)
-        record["masks"]["L1"]["polygons"][0][0] = [-1, 100]
+        record["masks"]["L1"]["polygons"][0][0] = [-1, 120]
         errors = validate_record(record, VALIDATOR)
         self.assertTrue(any("masks.L1.polygons" in error for error in errors))
 
-    def test_not_separable_head_cannot_have_a_fabricated_polygon(self):
+    def test_not_separable_femoral_centres_can_be_withheld_without_losing_union_mask(self):
         record = copy.deepcopy(EXAMPLE)
-        record["masks"]["FEMORAL_HEAD_2"] = {"status": "not_separable", "polygons": []}
         record["landmarks"]["FH2_CENTER"] = {
-            "status": "not_separable",
+            "status": "not_placed",
             "point": None,
             "uncertainty": "not_assessable"
         }
+        self.assertEqual(validate_record(record, VALIDATOR), [])
+
+    def test_not_placed_mask_is_not_a_negative_mask(self):
+        record = copy.deepcopy(EXAMPLE)
+        record["masks"]["L3"] = {"status": "not_placed", "polygons": []}
         self.assertEqual(validate_record(record, VALIDATOR), [])
 
 

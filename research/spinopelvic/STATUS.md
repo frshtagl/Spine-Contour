@@ -1,29 +1,34 @@
 # Research status log
 
-## 2026-11-25 — Workspace initialized
+## 2026-11-25 — Spine-Contour alignment revision
 
-- Created isolated branch: `research/spinopelvic-lab`.
-- Pinned baseline to fork commit `5df84e0af578e8faabab30b24e655735c3663ad4`.
-- Recorded the current source architectures and pretrained Git LFS object hashes.
-- Read the tentative UHS synopsis and mapped its two-model design to the source repository.
-- Adopted the investigator's working cohort: 400 examinations, with 240 train / 60 validation / 100 locked test.
-- Drafted a research annotation schema for separate masks, six required landmarks, and visibility/uncertainty states.
-- Added safeguards to keep all patient data and training artifacts out of the public GitHub repository.
+- Reviewed the full UHS spinopelvic synopsis.
+- Audited the public Spine-Contour source architecture and annotation/retraining documentation.
+- Corrected the earlier scaffold: Model A is now the source ResNet-34 U-Net route, not nnU-Net v2.
+- Model B uses the existing 22-channel HRNet-W32; the previously proposed 24-channel extension is removed.
+- Added the shared S1 Keypoint R-CNN (ResNet-50 FPN, two keypoints).
+- Changed the femoral target to one combined region mask plus source-style two-disc fitting; two expert centres remain as reference geometry.
+- Recommended 400 examinations: 300 development (240 train + 60 validation) and 100 locked test.
+- Updated annotation protocol, schema, example and tests to include L1–L5 masks, femoral union mask, S1 box/keypoints and all 22 HRNet landmarks.
+- Prepared synopsis amendment recommendations and ready-to-insert wording.
 
-## Not done yet
+## Important source limitation
 
-- No patient images or masks received.
-- No dataset has been built.
-- No training code or Colab training notebook has been implemented.
-- No checkpoint has been fine-tuned.
-- No test-set evaluation has been performed.
-- No custom ONNX model has been exported or integrated into the desktop application.
+The public repository includes the lumbar model architectures/checkpoints and inference/export implementation, but not the original lumbar training data or complete lumbar training loop/optimization recipe. Our local fine-tuning recipe must be documented as this study's method, not described as exact replication of the original hidden training experiment.
+
+## Not done
+
+- No patient images or annotations received.
+- No actual Git LFS checkpoint tensors inspected in this environment.
+- No dataset builder/training loop/Colab notebook implemented.
+- No fine-tuning or test evaluation performed.
+- No performance or clinical validation claim made.
 
 ## Next actions
 
-1. Approve/finalize the annotation SOP with the clinical readers.
-2. Confirm institutional approval for de-identification and cloud/Colab processing.
-3. Resolve whether Model A is nnU-Net v2, a compatible warm-start ResNet-34 U-Net, or a prespecified comparison of both.
-4. Validate the source-image-to-model coordinate transform on approved pilot cases.
-5. Implement dataset conversion and leakage checks.
-6. Implement training, validation, evaluation, and export only after the data contract is stable.
+1. Approve the synopsis changes and annotation SOP with supervisor/readers/statistician.
+2. Confirm 240/60/100 or revise the allocation.
+3. Confirm UHS/site approval for the planned compute route.
+4. Download LFS checkpoints locally and verify checkpoint metadata/tensor shapes.
+5. Validate schema and coordinate transforms on synthetic cases and an approved pilot.
+6. Implement dataset builder, trainers, evaluation and ONNX export.

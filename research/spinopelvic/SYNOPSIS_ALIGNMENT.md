@@ -1,77 +1,63 @@
-# Alignment with the tentative UHS synopsis
+# Synopsis alignment — Spine-Contour-compatible protocol
 
-## Study question and endpoints
+## Existing synopsis reviewed
 
-The uploaded synopsis proposes a reliability-aware deep-learning framework for PI, PT, SS, and L1–S1 LL on standing lateral lumbopelvic radiographs. It emphasizes that an angle should be withheld when the anatomical evidence needed for that specific angle is inadequate.
+File: `UHS_Spinopelvic_Synopsis_Revised.docx` (20 pages; surfaced 25 November 2026).
 
-The research software must keep these output dependencies separate:
+The current synopsis already defines PI, PT, SS and L1–S1 LL; six essential geometric measurement points; a 30–50 image reader pilot; independent readers; adjudication; parameter-specific withholding; MAE, coverage, Bland–Altman and ICC reporting. The principal amendments are to the model architecture, annotation targets, cohort allocation and transfer-learning description.
 
-- SS: S1 superior-endplate line.
-- LL: L1 and S1 superior-endplate lines.
-- PI and PT: S1 geometry plus a bicoxofemoral midpoint supported by two independently identifiable femoral-head centres.
+## Recommended cohort interpretation
 
-A merged pelvic silhouette or a single fused femoral mask centroid is not an acceptable substitute for the midpoint of two independently supported head centres.
-
-## Two-method design
-
-### Model A — segmentation-to-geometry
-
-The synopsis names 2D nnU-Net v2 as the primary segmentation approach. The proposed targets are L1–L5 vertebral anatomy, the S1 superior-endplate region, and the femoral-head region. Explicit line fitting and centre extraction follow segmentation.
-
-### Model B — direct landmark heatmaps
-
-The synopsis names a heatmap-based direct-landmark comparator with six mandatory points: two L1 superior-endplate endpoints, two S1 superior-endplate endpoints, and two independent femoral-head centres.
-
-Both methods must share the same image partitions, frozen geometry calculator, QC rules, and locked test references.
-
-## Updated working sample plan
-
-The synopsis currently says approximately 420 examinations: 300 development and 120 locked test. The investigator's current working plan is 400 total:
-
-| Partition | n | Notes |
+| Partition | n | Purpose |
 |---|---:|---|
-| Train | 240 | Training only |
-| Validation | 60 | Architecture/hyperparameter/QC-threshold selection |
-| Locked internal test | 100 | No tuning or iterative feedback |
-| **Total** | **400** | **300 development + 100 test** |
+| Training | 240 | Model parameter updates |
+| Validation | 60 | Checkpoint/threshold/hyperparameter selection |
+| Locked internal test | 100 | Final independent evaluation |
+| Total | 400 | 300 development + 100 test |
 
-The 100-case test size is a working choice, not a completed statistical justification. The synopsis illustrates a precision calculation using SD = 3° and a 95% CI half-width of 0.55°, which gives approximately 115 independent test examinations. With n = 100 and the same illustrative SD, the approximate half-width is 1.96 × 3 / √100 = 0.588°. Revisit this with the statistician and supervisor before the test set is locked. Do not present 100 as definitively powered without that review.
+All 300 development cases are annotated and split into training/validation. The 100 test cases receive independent expert reference annotations, but are not exposed to training or model-selection code. Patient-level separation is mandatory. If the investigator instead means 300 training-only plus 100 combined validation/test, the validation/test split must be specified and test precision will be lower if only 50 are reserved for test.
 
-Use patient-level separation. Prefer one examination per patient. Stratify by site where feasible. If repeated examinations are unavoidable, keep all examinations from one patient in one partition and adjust the analysis accordingly.
+The existing synopsis's illustrative calculation gives n ≈ 115 for SD = 3° and a 95% CI half-width of 0.55°. Under the same illustration, n = 100 gives a half-width of approximately 0.59°; n = 50 gives approximately 0.83°. A statistician must approve the final precision target.
 
-The 30–50-image annotation/repeat-reading pilot described in the synopsis must not include locked-test patients. It may be part of the development cohort only if the protocol and partition manifest make that explicit.
+## Replace the nnU-Net v2 primary architecture
 
-## Reference standard
+The public Spine-Contour lumbar path uses `segmentation_models_pytorch` U-Net with ResNet-34 encoder, one grayscale input and six output classes interpreted as background plus L1–L5. It does not use nnU-Net v2 for this lumbar path. If the investigator wants the same architecture, replace the synopsis's nnU-Net v2 wording with this ResNet-34 U-Net.
 
-- Two trained clinical readers independently annotate the test references while blinded to model predictions.
-- Freeze the landmark definitions, angle signs, visibility rules, and adjudication threshold after the pilot.
-- The synopsis lists >5° as an initial candidate adjudication trigger, not a final approved threshold.
-- Keep reader 1, reader 2, and adjudicated reference values separately.
-- Do not use AI masks as the test ground truth.
+## Model A — segmentation route
 
-## Outcomes to preserve
+- Vertebral segmentation: ResNet-34 U-Net, six classes (background + L1–L5).
+- S1: two-keypoint ResNet-50 FPN Keypoint R-CNN for S1 localization/endplate points.
+- Femoral region: one-class ResNet-34 U-Net for the combined femoral-head union mask.
+- Femoral centres: source-style two-disc fitting on the union mask, with independent expert centre references and prespecified fit QC.
+- Geometry: shared fixed angle calculator for PI, PT, SS and LL.
 
-Primary:
-- Parameter-specific MAE in degrees for PI, PT, SS, and LL, with 95% confidence intervals.
-- Proportion of reference-eligible test examinations receiving all four valid outputs.
+## Model B — landmark route
 
-Secondary:
-- Per-parameter coverage and withholding reasons.
-- Signed bias and Bland–Altman limits of agreement.
-- Absolute-agreement ICC(A,1), with confidence intervals.
-- Paired model differences on the same patients where both methods return a valid result.
-- Landmark localization error; segmentation Dice; line-angle error; human-reader variability; runtime.
+- Existing HRNet-W32, 22 heatmaps: four corners for each of L1–L5 plus two S1 points.
+- Keep the existing 22-channel checkpoint; do not add two femoral-centre channels.
+- Retain U-Net presence evidence as in the source inference path.
+- Use the same S1 and femoral branches, crop/preprocessing, geometry calculator and QC as Model A. This isolates the vertebral geometry route.
 
-Missing or withheld values must never be replaced with zero. Report the number screened, excluded, reference-ineligible, attempted, accepted, and withheld.
+## Femoral target correction
 
-## Items to reconcile before final synopsis submission
+The source femoral model predicts one combined region mask. The source postprocessor fits two discs to the merged component. Therefore the primary annotation target should be `FEMORAL_REGION_UNION`, not two independent semantic head masks. Annotators should additionally place the two independent expert reference centres (and optionally radii/rim points) so that centre extraction can be evaluated. A failed or implausible two-disc fit must cause PI/PT withholding; it must not be treated as a valid hip axis.
 
-1. Replace the tentative 420/300/120 count if the final approved plan is 400/240/60/100, and update the sample-size precision justification.
-2. Decide whether Model A remains nnU-Net v2 or whether a compatible Spine-Contour ResNet-34 U-Net warm-start is also included as a separate segmentation experiment. These are not the same architecture.
-3. Define how two overlapping femoral heads are annotated and when two independent centres are considered supportable.
-4. Define whether the 300 development cases include the 30–50-image reader-reliability pilot.
-5. Confirm the exact image orientation, pixel calibration, and coordinate conventions in the annotation SOP.
-6. Obtain written approval for any cross-site transfer or cloud/Colab processing before data are uploaded.
-7. Confirm that the locked 100-case test is sufficiently precise for the intended primary estimates.
+## Annotation format
 
-This file records technical alignment; it does not replace supervisor, statistician, radiology-reader, or ethics approval.
+Use separate hand-drawn L1, L2, L3, L4 and L5 masks; one femoral union mask; an S1 detection box and two S1 keypoints; all 22 HRNet landmark points; and two expert femoral-centre points. Preserve the five source annotation states: segmented, edited, manual, not_placed and not_visible. The current source level-editor record is geometry/provenance oriented, not a complete manual pixel-mask editor; a separate research mask schema is required.
+
+## Transfer-learning statement
+
+State that compatible available Spine-Contour checkpoints will be fine-tuned on the local development cohort. Do not claim exact replication of the original lumbar training procedure: the public repository lacks the original lumbar training data, complete training loop and full optimization recipe. Start each experiment from the original checkpoint, keep the unchanged source checkpoint as a baseline, and freeze the test set.
+
+## Proposed synopsis edits
+
+1. Change tentative sample size from 420 (300 development + 120 test) to 400 (300 development + 100 test), with 240 training and 60 validation within the 300.
+2. Replace nnU-Net v2 with ResNet-34 U-Net for Model A if exact architecture alignment is the priority.
+3. Replace the previous 24-channel HRNet proposal with the existing 22-channel HRNet-W32.
+4. Add the shared S1 Keypoint R-CNN and femoral U-Net/two-disc fitting components.
+5. Replace two separate femoral segmentation masks with one union mask plus two expert centre points.
+6. Add source-style annotation-state semantics and preserve model-original/corrected annotations.
+7. Add explicit transfer-learning and model-version/ONNX provenance details.
+8. Preserve the synopsis's ethics requirement: Colab/cloud use needs written UHS and site-specific approval.
+9. Update the sample-size precision statement and obtain statistician approval before locking the 100 test cases.

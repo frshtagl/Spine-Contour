@@ -1,42 +1,40 @@
-# Google Colab workflow — planned
+# Google Colab workflow — Spine-Contour-aligned training
 
-This folder records the intended Colab workflow. It is not an executable training notebook yet; the dataset builder and trainer have not been implemented.
+This is a planned workflow, not an executable training notebook yet.
 
-## Non-negotiable data approval
+## Data approval
 
-The uploaded UHS synopsis says that any cross-institutional data movement or external/cloud computation requires site-specific approval. Do not upload any radiograph, DICOM, mask, annotation JSON, reference reading, or patient-linked manifest to Google Colab/Drive until written UHS and relevant hospital approvals explicitly authorize that exact processing route.
+The UHS synopsis requires site-specific approval for cross-institutional movement and external/cloud computation. Do not upload radiographs, DICOMs, masks, annotation JSON, patient manifests or reference readings to Colab/Drive until written UHS and relevant hospital approvals explicitly authorize that processing route. Use institution-controlled compute if cloud processing is not approved.
 
-The GitHub repository is public. It is for code, documentation, synthetic examples, and approved aggregate metrics only.
+## Intended sequence after approval
 
-## Intended setup after approval
+1. Clone the research branch.
+2. Retrieve the original checkpoint files using Git LFS.
+3. Install pinned research/export dependencies.
+4. Read the approved, de-identified dataset from institution-approved storage outside the Git repository.
+5. Validate the annotation JSON and image hashes.
+6. Create patient-disjoint splits: 240 training, 60 validation, 100 locked test.
+7. Build targets:
+   - L1–L5/background masks for the vertebral ResNet-34 U-Net
+   - femoral union mask for the femoral ResNet-34 U-Net
+   - S1 bounding boxes and two keypoints for Keypoint R-CNN
+   - 22 heatmaps for HRNet-W32
+8. Fine-tune from the original checkpoints; retain the original source model as baseline.
+9. Save checkpoints/logs to approved persistent storage, not the public repository.
+10. Use validation only for selection; open the 100-case test set only after the pipeline and analysis plan are frozen.
+11. Export selected weights to ONNX and run graph/numerical parity tests.
+12. Commit code/configs/synthetic tests and approved aggregate results only.
 
-1. Open a Colab notebook using an institution-approved account and storage location.
-2. Select a GPU runtime and record GPU model, CUDA, Python, PyTorch, and package versions.
-3. Clone the research branch:
+## Training provenance
 
-   ```bash
-   git clone --branch research/spinopelvic-lab https://github.com/frshtagl/Spine-Contour.git
-   cd Spine-Contour
-   ```
-
-4. Install pinned training dependencies from the environment file that will be added with the trainer.
-5. Mount/read the approved dataset from the institution-authorized storage location. Do not place it inside the cloned Git repository.
-6. Run annotation validation and patient-level split checks before training.
-7. Train using only the 240 training cases; use the 60 validation cases for selection.
-8. Save checkpoints and detailed logs to the approved secure storage, not the public GitHub repository.
-9. Evaluate the locked 100-case test only once the analysis plan and model are frozen.
-10. Commit code, YAML configs, synthetic tests, and approved aggregate metrics to the research branch. Do not commit patient data or weights by default.
-
-## Persistence
-
-Colab runtimes are ephemeral. Checkpoints and logs must be saved to approved persistent storage during training. A Git commit is not a substitute for a secure model-artifact store.
+The public repository does not contain the original lumbar training set or complete training recipe. Record the local optimizer, learning rate, batch size, epochs, augmentation, loss, random seed, software/GPU versions and checkpoint-selection rule. Start each experiment from the original source checkpoint rather than chaining fine-tunes.
 
 ## Pending implementation
 
-- Reproducible environment/requirements file
-- Dataset builder and schema validator
-- Patient-level split generator
-- Training entry points for segmentation and HRNet
-- Checkpoint/resume support
-- Evaluation and report scripts
-- Colab notebook with preflight checks and run configuration
+- Full dataset builder and patient-level split generator
+- U-Net segmentation training loops
+- HRNet heatmap training loop
+- Keypoint R-CNN S1 training loop
+- Custom checkpoint loading/export options
+- Locked evaluation and statistical report scripts
+- Executable Colab notebook with approval/data-location preflight checks

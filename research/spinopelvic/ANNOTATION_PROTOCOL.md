@@ -1,82 +1,83 @@
-# Draft annotation protocol — version 0.1
+# Draft annotation protocol — Spine-Contour-compatible v0.2
 
-**Draft only.** Clinical readers and the supervisor must approve the anatomical definitions before production annotation.
+**Draft only.** The radiology readers and supervisor must approve anatomical definitions before production annotation.
 
-## 1. Unit of annotation
+## 1. Image and patient unit
 
-- One coded examination per patient wherever possible.
-- Store source-image width and height and SHA-256 of the exact pixel data used.
-- Coordinates use the original stored image frame: x increases rightward, y increases downward, origin at the top-left.
-- Record image orientation/anterior side explicitly; do not infer anterior/posterior from screen position without the orientation field.
-- No names, hospital numbers, dates of birth, accession numbers, or other direct identifiers in annotation files.
+- One coded standing lateral lumbopelvic examination per patient wherever possible.
+- Store SHA-256 of the exact image pixel data, width, height, orientation and pixel spacing when available.
+- Coordinates use original stored-image pixels: origin top-left, x rightward, y downward.
+- Store anatomical anterior-side mapping explicitly; do not infer A/P from screen position alone.
+- Direct identifiers and the re-identification key must remain outside the research annotation dataset.
 
-## 2. Required segmentation masks
+## 2. Masks for the segmentation models
 
-Provisional mask targets:
+### Vertebral U-Net target
 
-| Target | Meaning |
-|---|---|
-| L1 | Visible L1 vertebral body region |
-| L2 | Visible L2 vertebral body region |
-| L3 | Visible L3 vertebral body region |
-| L4 | Visible L4 vertebral body region |
-| L5 | Visible L5 vertebral body region |
-| S1_SUPERIOR_ENDPLATE | Visible superior S1 endplate region, not an invented full S1 body mask |
-| FEMORAL_REGION_UNION | Union of visible femoral-head region(s), for a one-class femoral segmentation warm-start |
-| FEMORAL_HEAD_1 | Separate head contour where individually traceable |
-| FEMORAL_HEAD_2 | Separate head contour where individually traceable |
+Six classes: background (0), L1 (1), L2 (2), L3 (3), L4 (4), L5 (5).
 
-The first seven targets are the provisional mutually exclusive semantic segmentation labels for a segmentation model. The two individual head contours are retained as separate annotation objects for geometric fitting and quality control. They must not be fabricated when the heads are fused or indistinguishable.
+Annotate five separate masks:
+- L1
+- L2
+- L3
+- L4
+- L5
 
-This is a draft target list, not a claim that the existing six-output vertebral checkpoint already uses this exact mapping. The source channel order must be verified before any pretrained segmentation weights are loaded.
+Keep the class identities stable. Do not relabel a visible L3 as L2 because another body is missing.
 
-## 3. Six mandatory landmarks
+### Femoral U-Net target
 
-Each study should receive these points when anatomically supportable:
+Annotate one binary `FEMORAL_REGION_UNION` mask containing the visible combined projected femoral-head region. This matches the source model's one-foreground-class output.
 
-- `L1_SUP_ANT`: anterior endpoint of the superior L1 endplate.
-- `L1_SUP_POST`: posterior endpoint of the superior L1 endplate.
-- `S1_SUP_ANT`: anterior endpoint of the superior S1 endplate.
-- `S1_SUP_POST`: posterior endpoint of the superior S1 endplate.
-- `FH1_CENTER`: centre of independently identified projected femoral head 1.
-- `FH2_CENTER`: centre of independently identified projected femoral head 2.
+Separately annotate two expert femoral-head centres as reference geometry. If two centres cannot be independently supported, record that status rather than inventing points. The union mask can still be retained for segmentation training, while PI/PT reference eligibility is withheld.
 
-Use the anatomical anterior/posterior labels after checking the stored image orientation. Head 1/head 2 should have a stable image-space ordering recorded in the SOP; do not label them left/right anatomically unless the projection and metadata justify that mapping.
+## 3. S1 detector target
 
-## 4. Visibility and uncertainty
+For the two-keypoint Keypoint R-CNN, record:
+- S1 detection bounding box
+- S1 superior-endplate anterior endpoint (SA)
+- S1 superior-endplate posterior endpoint (SP)
 
-For every mask and landmark, distinguish:
+The bounding box must enclose the S1 detection target consistently with the approved SOP. Keypoint order is anatomical, after checking image orientation.
 
-- `annotated`: visible and confidently outlined/placed.
-- `partial`: only a defensible portion is visible and is annotated as such.
-- `not_visible`: the reader confirms the structure is outside the field of view or absent from the image.
-- `not_separable`: overlapping anatomy prevents independent identification (especially femoral heads).
-- `not_annotated`: no decision has been made; this is not a negative label.
-- `uncertain`: visible but the boundary/point is ambiguous; retain an uncertainty flag and do not silently treat it as high-confidence ground truth.
+## 4. HRNet target: 22 landmarks
 
-A model must not be trained to interpret a default film-type setting as a confirmed negative. A fused femoral silhouette must never be converted into two invented centres. If two independent head centres cannot be supported, PI/PT reference eligibility and automated output must reflect that limitation; SS/LL may still be assessable.
+The existing HRNet checkpoint has 22 heatmaps:
+- L1: SA, SP, IA, IP
+- L2: SA, SP, IA, IP
+- L3: SA, SP, IA, IP
+- L4: SA, SP, IA, IP
+- L5: SA, SP, IA, IP
+- S1: SA, SP
 
-## 5. Reader reference angles
+The two femoral-head centres are additionally annotated for geometry reference and femoral fitter evaluation. They are not new HRNet channels in the Spine-Contour-aligned protocol.
 
-Keep angle readings separate from model-training masks. Store reader 1 and reader 2 measurements independently, then store adjudicated values in a separate locked reference record. Record PI, PT, SS, LL, visibility/eligibility per parameter, and any adjudication note. Do not let a model prediction populate a reference field.
+## 5. Source annotation states
 
-## 6. Annotation file format
+Use these states for every mask/keypoint object:
+- `segmented`: model prediction reviewed and accepted unchanged; positive label.
+- `edited`: model prediction corrected; corrected annotation is positive and original model prediction is retained as an error pair.
+- `manual`: annotator places a structure missed by the model; positive label and explicit model miss.
+- `not_placed`: structure is visible but has not been annotated; ignore, not negative.
+- `not_visible`: annotator explicitly checked and confirmed the structure is absent/out of view; negative label where appropriate.
 
-The provisional JSON structure is defined by:
+Never treat `not_placed` as `not_visible`. Uncertainty should be separately flagged. The state/provenance logic follows the Spine-Contour level-editor documentation, while the polygon masks are stored in the research-specific schema.
 
-- `schemas/annotation.schema.json`
-- `schemas/annotation.example.json`
+## 6. Reader reference values
 
-Polygon coordinates are in original-image pixels. Each polygon must have at least three points. If a mask consists of multiple disconnected visible components, store multiple polygons. Preserve separate femoral-head polygons only where the reader can distinguish them. The union mask can be derived from the individually labelled heads or annotated as a union when only the combined region is defensible.
+For all test images, two trained clinical readers independently annotate the six essential spinopelvic measurement points and measure PI, PT, SS and LL. Store reader 1, reader 2 and adjudicated reference records separately. Do not use model predictions to create reference labels.
 
-## 7. Quality control
+For development images, annotate the mask/keypoint targets required for model training and record the two femoral centres where independently supportable. Use the 30–50 image pilot to freeze definitions and repeatability/adjudication rules.
 
-- Review every annotation for swapped L1/S1 endpoints, reversed anterior/posterior orientation, malformed polygons, points outside the image, and implausible geometry.
-- Double-annotate the pilot and locked test according to the approved SOP.
-- Record reader code, protocol version, and uncertainty.
-- Keep the original radiograph immutable; corrections create a new annotation version.
-- Compute image hashes and keep an audit trail of annotation revisions.
+## 7. QC
 
-## 8. Existing editor versus hand-drawn masks
+- Check mask overlap, disconnected components, wrong vertebral class identity, polygon self-intersection, and out-of-image coordinates.
+- Check L1/S1 endpoint order and image orientation.
+- Check S1 box and keypoint geometry.
+- Check the femoral union mask and the two-disc fitter's fit confidence/IoU and anatomical plausibility.
+- Preserve original model output, corrected annotation, annotator, protocol version, image hash and timestamp.
+- If femoral centre fitting fails QC, withhold PI/PT but retain valid SS/LL where possible.
 
-The current Spine-Contour editor is useful for landmark corrections and femoral circle/rim-point placement. Its existing label record does not store arbitrary manually painted pixel masks for edited/manual vertebrae or full separate femoral-head polygons. Use the new research annotation format for hand-drawn masks unless and until a dedicated mask editor is implemented.
+## 8. Existing editor limitation
+
+The Spine-Contour label record stores model/annotator state, geometry, original model geometry and selected mask contours. It does not provide a general hand-painted pixel-mask format for all corrected/manual masks. The UHS project therefore uses `schemas/annotation.schema.json` for the hand-drawn polygons and points, while preserving the source five-state annotation semantics.

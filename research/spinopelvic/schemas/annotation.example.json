@@ -1,36 +1,382 @@
 {
-  "schema_version": "spinopelvic.annotation/0.1",
+  "schema_version": "spinecontour-spinopelvic.annotation/0.2",
   "study_id": "SYNTHETIC_0001",
   "image": {
     "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-    "width_px": 1000,
-    "height_px": 1000,
+    "width_px": 1200,
+    "height_px": 1400,
     "view": "standing_lateral",
     "anterior_side": "image_left",
     "pixel_spacing_mm": null
   },
   "annotation": {
     "reader_code": "R1",
-    "protocol_version": "draft-0.1",
-    "stage": "pilot"
+    "protocol_version": "draft-0.2",
+    "stage": "pilot",
+    "patient_group_code": "SYNTHETIC_PATIENT_0001"
+  },
+  "model": {
+    "name": "source_model_demo",
+    "version": "synthetic"
   },
   "masks": {
-    "L1": { "status": "annotated", "polygons": [[[300, 100], [500, 110], [490, 190], [290, 180]]] },
-    "L2": { "status": "annotated", "polygons": [[[295, 205], [500, 215], [490, 300], [285, 290]]] },
-    "L3": { "status": "annotated", "polygons": [[[290, 315], [500, 325], [490, 410], [285, 400]]] },
-    "L4": { "status": "annotated", "polygons": [[[285, 425], [495, 435], [490, 520], [280, 510]]] },
-    "L5": { "status": "annotated", "polygons": [[[280, 535], [490, 545], [495, 630], [285, 620]]] },
-    "S1_SUPERIOR_ENDPLATE": { "status": "annotated", "polygons": [[[290, 650], [500, 640], [505, 665], [295, 675]]] },
-    "FEMORAL_REGION_UNION": { "status": "annotated", "polygons": [[[400, 700], [570, 700], [600, 850], [420, 860]]] },
-    "FEMORAL_HEAD_1": { "status": "annotated", "polygons": [[[405, 710], [480, 700], [510, 760], [475, 820], [410, 790]]] },
-    "FEMORAL_HEAD_2": { "status": "annotated", "polygons": [[[475, 710], [550, 720], [575, 785], [535, 835], [475, 810]]] }
+    "L1": {
+      "status": "manual",
+      "polygons": [
+        [
+          [
+            360,
+            120
+          ],
+          [
+            650,
+            130
+          ],
+          [
+            640,
+            230
+          ],
+          [
+            350,
+            220
+          ]
+        ]
+      ]
+    },
+    "L2": {
+      "status": "manual",
+      "polygons": [
+        [
+          [
+            350,
+            250
+          ],
+          [
+            645,
+            260
+          ],
+          [
+            635,
+            365
+          ],
+          [
+            345,
+            355
+          ]
+        ]
+      ]
+    },
+    "L3": {
+      "status": "manual",
+      "polygons": [
+        [
+          [
+            345,
+            390
+          ],
+          [
+            640,
+            400
+          ],
+          [
+            635,
+            510
+          ],
+          [
+            340,
+            500
+          ]
+        ]
+      ]
+    },
+    "L4": {
+      "status": "manual",
+      "polygons": [
+        [
+          [
+            340,
+            535
+          ],
+          [
+            635,
+            530
+          ],
+          [
+            650,
+            650
+          ],
+          [
+            350,
+            660
+          ]
+        ]
+      ]
+    },
+    "L5": {
+      "status": "manual",
+      "polygons": [
+        [
+          [
+            350,
+            690
+          ],
+          [
+            650,
+            660
+          ],
+          [
+            675,
+            780
+          ],
+          [
+            370,
+            810
+          ]
+        ]
+      ]
+    },
+    "FEMORAL_REGION_UNION": {
+      "status": "manual",
+      "polygons": [
+        [
+          [
+            390,
+            900
+          ],
+          [
+            520,
+            860
+          ],
+          [
+            690,
+            880
+          ],
+          [
+            800,
+            960
+          ],
+          [
+            790,
+            1100
+          ],
+          [
+            650,
+            1180
+          ],
+          [
+            470,
+            1150
+          ],
+          [
+            380,
+            1040
+          ]
+        ]
+      ]
+    }
+  },
+  "s1_detection": {
+    "status": "manual",
+    "bbox": [
+      335,
+      820,
+      700,
+      900
+    ],
+    "uncertainty_note": null
   },
   "landmarks": {
-    "L1_SUP_ANT": { "status": "annotated", "point": [300, 100], "uncertainty": "clear" },
-    "L1_SUP_POST": { "status": "annotated", "point": [500, 110], "uncertainty": "clear" },
-    "S1_SUP_ANT": { "status": "annotated", "point": [290, 650], "uncertainty": "clear" },
-    "S1_SUP_POST": { "status": "annotated", "point": [500, 640], "uncertainty": "clear" },
-    "FH1_CENTER": { "status": "annotated", "point": [455, 760], "uncertainty": "clear" },
-    "FH2_CENTER": { "status": "annotated", "point": [525, 775], "uncertainty": "clear" }
+    "L1_SA": {
+      "status": "manual",
+      "point": [
+        360,
+        120
+      ],
+      "uncertainty": "clear"
+    },
+    "L1_SP": {
+      "status": "manual",
+      "point": [
+        650,
+        130
+      ],
+      "uncertainty": "clear"
+    },
+    "L1_IA": {
+      "status": "manual",
+      "point": [
+        350,
+        220
+      ],
+      "uncertainty": "clear"
+    },
+    "L1_IP": {
+      "status": "manual",
+      "point": [
+        640,
+        230
+      ],
+      "uncertainty": "clear"
+    },
+    "L2_SA": {
+      "status": "manual",
+      "point": [
+        350,
+        250
+      ],
+      "uncertainty": "clear"
+    },
+    "L2_SP": {
+      "status": "manual",
+      "point": [
+        645,
+        260
+      ],
+      "uncertainty": "clear"
+    },
+    "L2_IA": {
+      "status": "manual",
+      "point": [
+        345,
+        355
+      ],
+      "uncertainty": "clear"
+    },
+    "L2_IP": {
+      "status": "manual",
+      "point": [
+        635,
+        365
+      ],
+      "uncertainty": "clear"
+    },
+    "L3_SA": {
+      "status": "manual",
+      "point": [
+        345,
+        390
+      ],
+      "uncertainty": "clear"
+    },
+    "L3_SP": {
+      "status": "manual",
+      "point": [
+        640,
+        400
+      ],
+      "uncertainty": "clear"
+    },
+    "L3_IA": {
+      "status": "manual",
+      "point": [
+        340,
+        500
+      ],
+      "uncertainty": "clear"
+    },
+    "L3_IP": {
+      "status": "manual",
+      "point": [
+        635,
+        510
+      ],
+      "uncertainty": "clear"
+    },
+    "L4_SA": {
+      "status": "manual",
+      "point": [
+        340,
+        535
+      ],
+      "uncertainty": "clear"
+    },
+    "L4_SP": {
+      "status": "manual",
+      "point": [
+        635,
+        530
+      ],
+      "uncertainty": "clear"
+    },
+    "L4_IA": {
+      "status": "manual",
+      "point": [
+        350,
+        660
+      ],
+      "uncertainty": "clear"
+    },
+    "L4_IP": {
+      "status": "manual",
+      "point": [
+        650,
+        650
+      ],
+      "uncertainty": "clear"
+    },
+    "L5_SA": {
+      "status": "manual",
+      "point": [
+        350,
+        690
+      ],
+      "uncertainty": "clear"
+    },
+    "L5_SP": {
+      "status": "manual",
+      "point": [
+        650,
+        660
+      ],
+      "uncertainty": "clear"
+    },
+    "L5_IA": {
+      "status": "manual",
+      "point": [
+        370,
+        810
+      ],
+      "uncertainty": "clear"
+    },
+    "L5_IP": {
+      "status": "manual",
+      "point": [
+        675,
+        780
+      ],
+      "uncertainty": "clear"
+    },
+    "S1_SA": {
+      "status": "manual",
+      "point": [
+        340,
+        835
+      ],
+      "uncertainty": "clear"
+    },
+    "S1_SP": {
+      "status": "manual",
+      "point": [
+        680,
+        855
+      ],
+      "uncertainty": "clear"
+    },
+    "FH1_CENTER": {
+      "status": "manual",
+      "point": [
+        500,
+        1010
+      ],
+      "uncertainty": "clear"
+    },
+    "FH2_CENTER": {
+      "status": "manual",
+      "point": [
+        690,
+        1020
+      ],
+      "uncertainty": "clear"
+    }
   }
 }

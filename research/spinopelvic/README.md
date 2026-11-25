@@ -1,97 +1,108 @@
 # Spine-Contour Spinopelvic Research Workspace
 
-**Status:** scaffold created; no patient data, masks, or training runs have been added.
+**Status:** research scaffold and synopsis amendment prepared; no patient data or model training runs have been added.
 
-This workspace isolates the UHS spinopelvic research work from the existing Spine-Contour application. The branch is a complete snapshot of the current repository plus this research directory; the original application remains unchanged on `main`.
+This isolated workspace adapts the available Spine-Contour lumbar/lumbopelvic architecture and workflow for the UHS spinopelvic research study. The application on `main` remains unchanged.
 
-## Research target
-
-Develop and internally test a reliability-aware framework for estimating:
+## Study endpoints
 
 - Pelvic incidence (PI)
 - Pelvic tilt (PT)
 - Sacral slope (SS)
 - L1–S1 lumbar lordosis (LL)
 
-from de-identified standing lateral lumbopelvic radiographs, using the uploaded tentative UHS synopsis as the study basis.
-
-## Working sample plan
+## Working cohort plan
 
 | Partition | Images | Role |
 |---|---:|---|
-| Training | 240 | Parameter learning |
-| Validation | 60 | Model and threshold selection |
-| Locked internal test | 100 | One-time final evaluation |
-| **Total** | **400** | **300 development + 100 test** |
+| Training | 240 | Gradient updates only |
+| Validation | 60 | Model/threshold selection and early stopping |
+| Locked internal test | 100 | Final independent internal evaluation |
+| **Total** | **400** | **300 development + 100 locked test** |
 
-Partitions must be patient-disjoint. Prefer one examination per patient and stratify by collaborating site where feasible. The 100-image test set must not be used for training, model selection, threshold calibration, or iterative debugging.
+The 300 development examinations are expert-annotated and split into 240 training and 60 validation cases. The 100 test examinations also require independent expert reference annotations, but those labels are kept separate and are not used for training, model selection, threshold calibration or iterative debugging. Splits are patient-disjoint; one examination per patient is preferred.
 
-This is the current working plan requested by the investigator. It differs from the tentative synopsis, which currently proposes approximately 420 examinations (300 development and 120 test). See [SYNOPSIS_ALIGNMENT.md](SYNOPSIS_ALIGNMENT.md).
+This is the recommended interpretation of the investigator's “300 annotated + 100 validation/test” plan. It keeps a 100-case final test set while creating a validation set within the 300 development cases. The synopsis's illustrative precision calculation should be updated and approved by the statistician.
 
-## Two research tracks
+## Spine-Contour-compatible model architecture
 
-### Model A — segmentation-to-geometry
+The proposed study follows the architecture visible in the public Spine-Contour source:
 
-The synopsis proposes 2D nnU-Net v2 segmentation of L1–L5 vertebral anatomy, the S1 superior-endplate region, and the femoral-head region, followed by explicit geometric extraction. The existing Spine-Contour ResNet-34 U-Net checkpoints are useful warm-start candidates, but they are **not automatically compatible with nnU-Net v2**. Keep the architecture decision explicit; do not describe a ResNet-34 U-Net experiment as nnU-Net.
+### Model A — U-Net vertebral segmentation route
 
-### Model B — direct landmarks
+- `segmentation_models_pytorch` U-Net with ResNet-34 encoder
+- Single grayscale input
+- Six output classes: background plus L1–L5
+- Extract vertebral corners/endplate lines from the predicted masks
 
-The existing HRNet-W32 checkpoint predicts 22 lumbar/S1 landmarks. The six required spinopelvic points are:
+### Model B — HRNet vertebral landmark route
 
-1. L1 superior-endplate anterior endpoint
-2. L1 superior-endplate posterior endpoint
-3. S1 superior-endplate anterior endpoint
-4. S1 superior-endplate posterior endpoint
-5. Femoral-head centre 1
-6. Femoral-head centre 2
+- Existing HRNet-W32 checkpoint
+- 22 heatmaps: four corners for each of L1–L5 and two S1 endplate points
+- Use the existing 22-channel head; do not add two femoral-centre channels
+- Retain U-Net presence evidence as in the reference inference path
 
-A weight-preserving extension to 24 output channels is a candidate: retain the pretrained 22 channels and initialize two new femoral-centre channels. This requires implementation and tests; it has not yet been built.
+### Shared components
 
-## What is already available in this repository
+- S1 localization/endplate: TorchVision Keypoint R-CNN, ResNet-50 FPN, two keypoints
+- Femoral region: ResNet-34 U-Net, one foreground output channel for the combined femoral-head region
+- Femoral centre extraction: two-disc fitting on the combined mask, using distance-transform/ridge/peeling seeds, robust circle fitting and union-mask IoU optimization
+- Shared angle calculator, QC rules, source-coordinate restoration and locked test cases
 
-The source application and its pretrained weights remain at their original paths. They are deliberately referenced rather than duplicated:
+The two vertebral routes are alternatives within the same overall pipeline. They are not two entirely independent systems: both use the same S1 and femoral components and the same geometry/QC modules.
 
-- Architectures/checkpoint builders: `backend/models/training.py`
-- HRNet architecture and heatmap decoding: `backend/models/hrnet.py`
-- Inference model definitions and image transforms: `backend/models/models.py`
-- Lumbar/femoral framing: `backend/framing.py`
-- Two-head fitting from a merged femoral mask: `backend/femoral.py`
-- ONNX export: `tools/export_onnx.py`
-- Existing level editor: `renderer/level-editor.js`
-- Existing annotation record: `renderer/data/label-record.js`
-- Annotation guide and schema: `docs/level-editor.md` and `docs/design/level-editor/label-record.schema.json`
+## Preprocessing to reproduce
 
-See [BASELINE_INVENTORY.md](BASELINE_INVENTORY.md) for the pinned source revision, model inventory, LFS hashes, and compatibility gaps.
+- Robust grayscale rescaling using the source implementation's 0.5th and 99.5th percentiles
+- Aspect-ratio-preserving letterbox to 768 × 768 for the shared vertebral/S1/HRNet model frame
+- S1-relative crop localization and source-coordinate restoration
+- Separate femoral input path: CLAHE before padding/resizing, 640 × 640 input, and horizontal-flip probability averaging
+- Verify crop/letterbox forward and inverse coordinate transforms before training
 
-## Workspace layout
+## Annotation design
 
-```text
-research/spinopelvic/
-├── README.md
-├── STATUS.md
-├── BASELINE_INVENTORY.md
-├── SYNOPSIS_ALIGNMENT.md
-├── ANNOTATION_PROTOCOL.md
-├── TRAINING_PLAN.md
-├── UPSTREAM_AND_LICENSE.md
-├── .gitignore
-├── configs/
-│   └── project.yaml
-├── schemas/
-│   ├── annotation.schema.json
-│   └── annotation.example.json
-└── colab/
-    └── README.md
-```
+The research annotation format is deliberately separate from the current Spine-Contour level-editor record because the editor record is not a general hand-painted pixel-mask format.
 
-## Data and security rule
+Required hand annotations:
+- Separate L1, L2, L3, L4 and L5 masks for the six-class vertebral U-Net
+- One combined femoral-head union mask for the one-class femoral U-Net
+- S1 detection box and two S1 superior-endplate keypoints for Keypoint R-CNN
+- 22 landmark points for the HRNet target: four corners for each L1–L5 plus two S1 points
+- Two independent femoral-head centres as reference geometry for validating the two-disc fitter and calculating PI/PT
 
-The parent repository is public. **Never commit radiographs, DICOM files, hand-drawn masks, annotation JSON, patient/study manifests, reference readings, checkpoints, or derived image crops to this repository.** The nested `.gitignore` blocks the planned local data/output folders and common medical-image formats.
+Follow Spine-Contour's annotation-state semantics:
+- `segmented`: model output accepted
+- `edited`: model output corrected; preserve the original prediction as an error pair
+- `manual`: anatomy placed by hand after a model miss
+- `not_placed`: visible but not annotated; ignore for training
+- `not_visible`: explicitly checked and absent; negative label where appropriate
 
-The synopsis states that any movement of data across institutions or use of external/cloud computation requires site-specific approval. Therefore, Colab may only be used after written UHS and relevant hospital approvals explicitly permit the proposed de-identified data to be processed there. De-identification alone is not permission to upload.
+A fused femoral mask is the expected segmentation target. The two-disc fitter must pass prespecified quality checks against expert reference centres; otherwise PI/PT are withheld.
+
+## Training and provenance
+
+Available checkpoints are in the repository's Git LFS paths:
+- `backend/weights/vertebra_unet.pt`
+- `backend/weights/hrnet_landmarks.pt`
+- `backend/weights/s1_keypointrcnn.pt`
+- `backend/weights/femoral_unet.pt`
+
+The public repository includes architecture builders and ONNX export code, but not the original lumbar training dataset or a complete lumbar training loop/recipe. We will therefore fine-tune compatible checkpoints using a newly documented local protocol, not claim exact reproduction of undisclosed original training hyperparameters.
+
+Each experiment starts from the original checkpoint, not a chain of previously fine-tuned checkpoints. Keep the unchanged source checkpoint as a baseline and maintain a frozen development benchmark to detect regression/catastrophic forgetting.
+
+## Data security
+
+The parent repository is public. Never commit radiographs, DICOMs, masks, annotation JSON, patient manifests, reader measurements, trained checkpoints or derived patient-level artifacts. The nested `.gitignore` blocks common data/artifact paths. Keep data and weights in institution-approved secure storage.
+
+The synopsis requires site-specific approval for cross-institutional transfer and external/cloud computation. Colab may be used only after written UHS and relevant hospital approvals explicitly permit the proposed processing route.
 
 ## Current milestone
 
-The research workspace, baseline inventory, provisional annotation schema, and 400-image experiment plan are recorded. The dataset builder, mask rasterizer, trainer, evaluation scripts, Colab notebook, and custom ONNX exporter are **not yet implemented**. No training or accuracy claim has been made.
+- Research workspace and initial annotation tools are present.
+- Spine-Contour-compatible architecture and synopsis amendments are documented.
+- The revised annotation schema now supports the source architecture's mask and landmark targets.
+- Dataset builder, training loops, evaluation scripts, Colab notebook and custom ONNX exporter remain to be implemented.
+- No training, test evaluation or accuracy claim has been made.
 
-Next milestone: freeze the annotation SOP and architecture decision, then implement and test the dataset builder against a small, approved pilot set.
+Next: approve the synopsis/SOP, retrieve and inspect the actual LFS checkpoints, validate the annotations on a small approved pilot, and implement the deterministic dataset builder.

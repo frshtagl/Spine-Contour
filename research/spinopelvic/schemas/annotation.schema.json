@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "spinopelvic.annotation/0.1",
-  "title": "Spinopelvic research polygon and landmark annotation",
-  "description": "Draft research annotation record. Coordinates are in the original stored image pixel frame, origin at top-left. No direct patient identifiers are permitted.",
+  "$id": "spinecontour-spinopelvic.annotation/0.2",
+  "title": "Spine-Contour-aligned spinopelvic mask and landmark annotation",
+  "description": "Draft research annotation format. Original stored-image pixel coordinates, origin top-left. No direct identifiers.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -11,37 +11,70 @@
     "image",
     "annotation",
     "masks",
+    "s1_detection",
     "landmarks"
   ],
   "properties": {
-    "schema_version": { "const": "spinopelvic.annotation/0.1" },
+    "schema_version": {
+      "const": "spinecontour-spinopelvic.annotation/0.2"
+    },
     "study_id": {
       "type": "string",
-      "pattern": "^[A-Za-z0-9_-]{1,64}$",
-      "description": "Coded study identifier only; not a patient name, MRN, accession number, or date of birth."
+      "pattern": "^[A-Za-z0-9_-]{1,64}$"
     },
     "image": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["sha256", "width_px", "height_px", "view", "anterior_side"],
+      "required": [
+        "sha256",
+        "width_px",
+        "height_px",
+        "view",
+        "anterior_side"
+      ],
       "properties": {
-        "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
-        "width_px": { "type": "integer", "minimum": 1 },
-        "height_px": { "type": "integer", "minimum": 1 },
-        "view": { "const": "standing_lateral" },
-        "anterior_side": { "enum": ["image_left", "image_right", "unknown"] },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "width_px": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height_px": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "view": {
+          "const": "standing_lateral"
+        },
+        "anterior_side": {
+          "enum": [
+            "image_left",
+            "image_right",
+            "unknown"
+          ]
+        },
         "pixel_spacing_mm": {
           "oneOf": [
             {
               "type": "array",
               "prefixItems": [
-                { "type": "number", "exclusiveMinimum": 0 },
-                { "type": "number", "exclusiveMinimum": 0 }
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
               ],
               "minItems": 2,
               "maxItems": 2
             },
-            { "type": "null" }
+            {
+              "type": "null"
+            }
           ]
         }
       }
@@ -49,59 +82,252 @@
     "annotation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["reader_code", "protocol_version", "stage"],
+      "required": [
+        "reader_code",
+        "protocol_version",
+        "stage"
+      ],
       "properties": {
-        "reader_code": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,32}$" },
-        "protocol_version": { "type": "string", "minLength": 1 },
-        "stage": { "enum": ["pilot", "development", "locked_test_reference"] }
+        "reader_code": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,32}$"
+        },
+        "protocol_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage": {
+          "enum": [
+            "pilot",
+            "development",
+            "locked_test_reference"
+          ]
+        },
+        "patient_group_code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Coded grouping key; store only in approved secure data storage."
+        }
+      }
+    },
+    "model": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
       }
     },
     "masks": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "L1", "L2", "L3", "L4", "L5",
-        "S1_SUPERIOR_ENDPLATE",
-        "FEMORAL_REGION_UNION",
-        "FEMORAL_HEAD_1",
-        "FEMORAL_HEAD_2"
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5",
+        "FEMORAL_REGION_UNION"
       ],
       "properties": {
-        "L1": { "$ref": "#/$defs/mask" },
-        "L2": { "$ref": "#/$defs/mask" },
-        "L3": { "$ref": "#/$defs/mask" },
-        "L4": { "$ref": "#/$defs/mask" },
-        "L5": { "$ref": "#/$defs/mask" },
-        "S1_SUPERIOR_ENDPLATE": { "$ref": "#/$defs/mask" },
-        "FEMORAL_REGION_UNION": { "$ref": "#/$defs/mask" },
-        "FEMORAL_HEAD_1": { "$ref": "#/$defs/mask" },
-        "FEMORAL_HEAD_2": { "$ref": "#/$defs/mask" }
+        "L1": {
+          "$ref": "#/$defs/mask"
+        },
+        "L2": {
+          "$ref": "#/$defs/mask"
+        },
+        "L3": {
+          "$ref": "#/$defs/mask"
+        },
+        "L4": {
+          "$ref": "#/$defs/mask"
+        },
+        "L5": {
+          "$ref": "#/$defs/mask"
+        },
+        "FEMORAL_REGION_UNION": {
+          "$ref": "#/$defs/mask"
+        }
+      }
+    },
+    "s1_detection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "bbox"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/state"
+        },
+        "bbox": {
+          "oneOf": [
+            {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "minItems": 4,
+              "maxItems": 4
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "uncertainty_note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
     "landmarks": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "L1_SUP_ANT", "L1_SUP_POST",
-        "S1_SUP_ANT", "S1_SUP_POST",
-        "FH1_CENTER", "FH2_CENTER"
+        "L1_SA",
+        "L1_SP",
+        "L1_IA",
+        "L1_IP",
+        "L2_SA",
+        "L2_SP",
+        "L2_IA",
+        "L2_IP",
+        "L3_SA",
+        "L3_SP",
+        "L3_IA",
+        "L3_IP",
+        "L4_SA",
+        "L4_SP",
+        "L4_IA",
+        "L4_IP",
+        "L5_SA",
+        "L5_SP",
+        "L5_IA",
+        "L5_IP",
+        "S1_SA",
+        "S1_SP",
+        "FH1_CENTER",
+        "FH2_CENTER"
       ],
       "properties": {
-        "L1_SUP_ANT": { "$ref": "#/$defs/landmark" },
-        "L1_SUP_POST": { "$ref": "#/$defs/landmark" },
-        "S1_SUP_ANT": { "$ref": "#/$defs/landmark" },
-        "S1_SUP_POST": { "$ref": "#/$defs/landmark" },
-        "FH1_CENTER": { "$ref": "#/$defs/landmark" },
-        "FH2_CENTER": { "$ref": "#/$defs/landmark" }
+        "L1_SA": {
+          "$ref": "#/$defs/landmark"
+        },
+        "L1_SP": {
+          "$ref": "#/$defs/landmark"
+        },
+        "L1_IA": {
+          "$ref": "#/$defs/landmark"
+        },
+        "L1_IP": {
+          "$ref": "#/$defs/landmark"
+        },
+        "L2_SA": {
+          "$ref": "#/$defs/landmark"
+        },
+        "L2_SP": {
+          "$ref": "#/$defs/landmark"
+        },
+        "L2_IA": {
+          "$ref": "#/$defs/landmark"
+        },
+        "L2_IP": {
+          "$ref": "#/$defs/landmark"
+        },
+        "L3_SA": {
+          "$ref": "#/$defs/landmark"
+        },
+        "L3_SP": {
+          "$ref": "#/$defs/landmark"
+        },
+        "L3_IA": {
+          "$ref": "#/$defs/landmark"
+        },
+        "L3_IP": {
+          "$ref": "#/$defs/landmark"
+        },
+        "L4_SA": {
+          "$ref": "#/$defs/landmark"
+        },
+        "L4_SP": {
+          "$ref": "#/$defs/landmark"
+        },
+        "L4_IA": {
+          "$ref": "#/$defs/landmark"
+        },
+        "L4_IP": {
+          "$ref": "#/$defs/landmark"
+        },
+        "L5_SA": {
+          "$ref": "#/$defs/landmark"
+        },
+        "L5_SP": {
+          "$ref": "#/$defs/landmark"
+        },
+        "L5_IA": {
+          "$ref": "#/$defs/landmark"
+        },
+        "L5_IP": {
+          "$ref": "#/$defs/landmark"
+        },
+        "S1_SA": {
+          "$ref": "#/$defs/landmark"
+        },
+        "S1_SP": {
+          "$ref": "#/$defs/landmark"
+        },
+        "FH1_CENTER": {
+          "$ref": "#/$defs/landmark"
+        },
+        "FH2_CENTER": {
+          "$ref": "#/$defs/landmark"
+        }
       }
     }
   },
   "$defs": {
+    "state": {
+      "enum": [
+        "segmented",
+        "edited",
+        "manual",
+        "not_placed",
+        "not_visible"
+      ]
+    },
     "point": {
       "type": "array",
       "prefixItems": [
-        { "type": "number" },
-        { "type": "number" }
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
       ],
       "minItems": 2,
       "maxItems": 2
@@ -109,62 +335,166 @@
     "polygon": {
       "type": "array",
       "minItems": 3,
-      "items": { "$ref": "#/$defs/point" }
+      "items": {
+        "$ref": "#/$defs/point"
+      }
     },
     "mask": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["status", "polygons"],
+      "required": [
+        "status",
+        "polygons"
+      ],
       "properties": {
         "status": {
-          "enum": ["annotated", "partial", "not_visible", "not_separable", "not_annotated"]
+          "$ref": "#/$defs/state"
         },
         "polygons": {
           "type": "array",
-          "items": { "$ref": "#/$defs/polygon" }
+          "items": {
+            "$ref": "#/$defs/polygon"
+          }
         },
-        "uncertainty_note": { "type": ["string", "null"] }
+        "model_polygons": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/polygon"
+          }
+        },
+        "uncertainty_note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       },
       "allOf": [
         {
-          "if": { "properties": { "status": { "enum": ["annotated", "partial"] } }, "required": ["status"] },
-          "then": { "properties": { "polygons": { "minItems": 1 } } }
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "segmented",
+                  "edited",
+                  "manual"
+                ]
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "polygons": {
+                "minItems": 1
+              }
+            }
+          }
         },
         {
-          "if": { "properties": { "status": { "enum": ["not_visible", "not_separable", "not_annotated"] } }, "required": ["status"] },
-          "then": { "properties": { "polygons": { "maxItems": 0 } } }
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "not_placed",
+                  "not_visible"
+                ]
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "polygons": {
+                "maxItems": 0
+              }
+            }
+          }
         }
       ]
     },
     "landmark": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["status", "point", "uncertainty"],
+      "required": [
+        "status",
+        "point",
+        "uncertainty"
+      ],
       "properties": {
         "status": {
-          "enum": ["annotated", "not_visible", "not_separable", "not_annotated", "uncertain"]
+          "$ref": "#/$defs/state"
         },
         "point": {
           "oneOf": [
-            { "$ref": "#/$defs/point" },
-            { "type": "null" }
+            {
+              "$ref": "#/$defs/point"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
-        "uncertainty": { "enum": ["clear", "uncertain", "not_assessable"] }
+        "uncertainty": {
+          "enum": [
+            "clear",
+            "uncertain",
+            "not_assessable"
+          ]
+        }
       },
       "allOf": [
         {
-          "if": { "properties": { "status": { "const": "annotated" } }, "required": ["status"] },
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "segmented",
+                  "edited",
+                  "manual"
+                ]
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
           "then": {
             "properties": {
-              "point": { "$ref": "#/$defs/point" },
-              "uncertainty": { "const": "clear" }
+              "point": {
+                "$ref": "#/$defs/point"
+              }
             }
           }
         },
         {
-          "if": { "properties": { "status": { "enum": ["not_visible", "not_separable", "not_annotated"] } }, "required": ["status"] },
-          "then": { "properties": { "point": { "type": "null" } } }
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "not_placed",
+                  "not_visible"
+                ]
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "point": {
+                "type": "null"
+              }
+            }
+          }
         }
       ]
     }

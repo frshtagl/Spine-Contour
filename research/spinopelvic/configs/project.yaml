@@ -6,18 +6,37 @@ project:
   source_commit: "5df84e0af578e8faabab30b24e655735c3663ad4"
 
 endpoints:
-  angles:
-    - PI
-    - PT
-    - SS
-    - LL_L1_S1
-  required_landmarks:
-    - L1_SUP_ANT
-    - L1_SUP_POST
-    - S1_SUP_ANT
-    - S1_SUP_POST
+  angles: [PI, PT, SS, LL_L1_S1]
+  essential_measurement_points:
+    - L1_SA
+    - L1_SP
+    - S1_SA
+    - S1_SP
     - FH1_CENTER
     - FH2_CENTER
+  hrnet_landmarks:
+    - L1_SA
+    - L1_SP
+    - L1_IA
+    - L1_IP
+    - L2_SA
+    - L2_SP
+    - L2_IA
+    - L2_IP
+    - L3_SA
+    - L3_SP
+    - L3_IA
+    - L3_IP
+    - L4_SA
+    - L4_SP
+    - L4_IA
+    - L4_IP
+    - L5_SA
+    - L5_SP
+    - L5_IA
+    - L5_IP
+    - S1_SA
+    - S1_SP
 
 cohort:
   total: 400
@@ -27,68 +46,84 @@ cohort:
     train: 240
     validation: 60
     test: 100
-  unit: one_examination_per_patient_preferred
   patient_disjoint: true
-  stratify_by_site: preferred_where_feasible
+  one_exam_per_patient_preferred: true
   test_locked: true
+  stratify_by_site: preferred_where_feasible
   random_seed: pending_protocol_freeze
 
+models:
+  model_a:
+    role: vertebral_segmentation_route
+    architecture: segmentation_models_pytorch.Unet
+    encoder: resnet34
+    input_channels: 1
+    output_classes: 6
+    class_map: [background, L1, L2, L3, L4, L5]
+    checkpoint: backend/weights/vertebra_unet.pt
+  model_b:
+    role: vertebral_landmark_route
+    architecture: HRNet_W32
+    checkpoint: backend/weights/hrnet_landmarks.pt
+    output_heatmaps: 22
+    heatmap_stride: 4
+    channels: "L1-L5 four corners each plus S1 superior-endplate SA/SP"
+    do_not_extend_to_24_channels: true
+  shared_s1:
+    architecture: Keypoint_R_CNN_ResNet50_FPN
+    checkpoint: backend/weights/s1_keypointrcnn.pt
+    keypoints: 2
+    role: "S1 localization and superior-endplate endpoints"
+  shared_femoral:
+    architecture: segmentation_models_pytorch.Unet
+    encoder: resnet34
+    input_channels: 1
+    output_channels: 1
+    checkpoint: backend/weights/femoral_unet.pt
+    target: FEMORAL_REGION_UNION
+    input_size: [640, 640]
+    preprocessing:
+      clahe_clip_limit: 2.0
+      clahe_tile_grid: [8, 8]
+      horizontal_flip_probability_average: true
+    postprocessing:
+      method: two_disc_fit_on_union_mask
+      source: backend/femoral.py
+      require_fit_qc: true
+
+preprocessing:
+  robust_rescale_percentiles: [0.5, 99.5]
+  shared_model_canvas: [768, 768]
+  preserve_aspect_ratio: true
+  crop_localizer: S1_Keypoint_R_CNN
+  source_of_truth:
+    - backend/models/models.py
+    - backend/framing.py
+    - backend/femoral.py
+  verify_forward_inverse_coordinate_parity: required
+  augmentation_only_in_training: true
+
 annotation:
-  schema: "spinopelvic.annotation/0.1"
+  schema: "spinecontour-spinopelvic.annotation/0.2"
   coordinate_frame: original_image_pixels
   origin: top_left
   x_axis: right
   y_axis: down
-  polygon_masks: true
-  preserve_independent_femoral_heads: true
-  no_invented_centres_when_not_separable: true
+  vertebral_masks: [L1, L2, L3, L4, L5]
+  femoral_mask: FEMORAL_REGION_UNION
+  s1_detection_box_and_keypoints: true
+  hrnet_landmark_count: 22
+  expert_femoral_centres: 2
+  preserve_source_annotation_states: [segmented, edited, manual, not_placed, not_visible]
+  not_placed_is_ignored: true
+  not_visible_is_negative_only_when_explicit: true
 
-segmentation_targets:
-  # Provisional targets; confirm the final label map in the approved SOP.
-  labels:
-    0: background
-    1: L1
-    2: L2
-    3: L3
-    4: L4
-    5: L5
-    6: S1_SUPERIOR_ENDPLATE
-    7: FEMORAL_REGION_UNION
-  separate_annotation_objects:
-    - FEMORAL_HEAD_1
-    - FEMORAL_HEAD_2
-
-models:
-  model_a:
-    role: segmentation_to_geometry
-    synopsis_architecture: nnUNet_v2_2d
-    warm_start_candidate: SpineContour_SMP_ResNet34_UNet
-    architecture_decision: pending
-    note: "Existing SMP U-Net weights are not directly interchangeable with nnU-Net v2."
-  model_b:
-    role: direct_landmark_heatmaps
-    backbone: HRNet_W32
-    checkpoint: backend/weights/hrnet_landmarks.pt
-    existing_output_channels: 22
-    planned_output_channels: 24
-    added_channels:
-      - FH1_CENTER
-      - FH2_CENTER
-    status: planned_not_implemented
-  femoral_warm_start:
-    architecture: SpineContour_SMP_ResNet34_UNet
-    checkpoint: backend/weights/femoral_unet.pt
-    output_channels: 1
-    target: FEMORAL_REGION_UNION
-    separate_head_annotations_retained: true
-
-preprocessing:
-  source_of_truth:
-    - backend/models/models.py
-    - backend/framing.py
-  preserve_aspect_ratio: true
-  verify_forward_inverse_coordinate_parity: required
-  augmentation_only_in_training: true
+training:
+  initialize_from_original_checkpoints: true
+  never_chain_finetunes: true
+  keep_source_baseline: true
+  hyperparameters: pending_development_pilot
+  public_repo_contains_training_data: false
 
 security:
   repository_visibility: public
@@ -103,4 +138,3 @@ artifacts:
   checkpoints_root: approved_secure_storage
   run_logs: approved_secure_storage
   aggregate_metrics_may_be_committed: true
-  model_weights_publication: requires_license_and_ethics_review

@@ -1,89 +1,89 @@
-# Training and evaluation plan
+# Training and evaluation plan — Spine-Contour-compatible
 
-## Phase 0 — freeze the data contract
+## Phase 0 — approvals and protocol freeze
 
-Before training:
-1. Approve the annotation SOP and schema with the clinical readers.
-2. Confirm institutional permission for the image source, de-identification, transfer, and Colab use.
-3. Confirm the exact pixel preprocessing and coordinate transforms.
-4. Pin package versions, source commit, model checkpoint hashes, and random seeds.
-5. Build patient-level train/validation/test manifests and lock the test partition.
+1. Obtain UHS and relevant hospital ethics/archive approvals.
+2. Obtain written site-specific approval for any inter-site data movement or Colab/cloud processing.
+3. Approve the annotation SOP, model targets, image eligibility and adjudication rules.
+4. Confirm the 400-case plan and patient-level split before test-set access.
+5. Retrieve actual Git LFS checkpoint files and inspect their metadata/tensor shapes locally.
+6. Pin source commit, checkpoint hashes, packages, random seeds and preprocessing.
 
-## Phase 1 — dataset builder
+## Phase 1 — cohort and split
 
-Implement a deterministic dataset builder that:
+| Split | n | Role |
+|---|---:|---|
+| Train | 240 | Gradient updates |
+| Validation | 60 | Early stopping, hyperparameters and QC thresholds |
+| Locked internal test | 100 | One-time final internal evaluation |
+| Total | 400 | 300 development + 100 test |
 
-- Validates annotation JSON against `schemas/annotation.schema.json`.
-- Resolves each coded case to the exact approved local image using SHA-256.
+The 300 development cases are annotated and split into train/validation. The 100 test cases receive independent expert reference labels but remain unavailable to training/model-selection code. Keep all examinations from a patient in one split. Prefer one examination per patient.
+
+## Phase 2 — dataset builder
+
+Implement a deterministic builder that:
+- Validates records against `schemas/annotation.schema.json`.
+- Joins image/annotation records by image SHA-256.
 - Checks duplicate images and patient-group leakage.
-- Validates polygon geometry and landmark bounds.
-- Rasterizes masks without changing aspect ratio or orientation.
-- Applies the same spatial transform to image, masks, polygons, and landmarks.
-- Creates train/validation data only from the 300 development cases.
-- Keeps the 100 test cases and references inaccessible to the training/tuning process.
-- Writes a manifest hash and a clear report of excluded/invalid cases.
+- Rasterizes five mutually exclusive L1–L5 masks and the femoral union mask.
+- Creates HRNet heatmap targets for 22 landmarks.
+- Creates Keypoint R-CNN targets: S1 box plus two S1 keypoints.
+- Retains two femoral reference centres for two-disc fitter evaluation; they are not HRNet channels.
+- Reproduces the S1-relative crop, grayscale rescaling, letterbox, femoral CLAHE/resize and coordinate restoration.
+- Applies spatial augmentation identically to image, masks, boxes and keypoints.
+- Writes split-manifest and dataset hashes; test labels must not enter training loaders.
 
-## Phase 2 — Model A: segmentation-to-geometry
+## Phase 3 — Model A: U-Net segmentation route
 
-The synopsis names 2D nnU-Net v2 as the primary segmentation route. The repository's existing segmentation checkpoints are segmentation_models_pytorch ResNet-34 U-Nets, not nnU-Net v2. Do not load their state dictionaries into nnU-Net or claim that this is direct fine-tuning.
+- Fine-tune `backend/weights/vertebra_unet.pt` with L1–L5/background masks, after verifying the six-class channel semantics against the actual checkpoint.
+- Fine-tune `backend/weights/femoral_unet.pt` with the binary femoral union mask.
+- Fine-tune `backend/weights/s1_keypointrcnn.pt` with S1 bounding boxes and two S1 keypoints.
+- Extract L1–L5 corners from the vertebral masks using the source corner extraction method.
+- Apply the source two-disc fitter to the femoral union mask and validate centre errors against expert references.
+- Calculate PI, PT, SS and LL with the shared geometry module.
 
-Run a documented architecture feasibility gate:
+## Phase 4 — Model B: HRNet landmark route
 
-- **Warm-start experiment:** fine-tune the exact existing Spine-Contour ResNet-34 U-Net(s) using only target channels proven compatible with their original checkpoint semantics. The existing femoral model has one foreground channel and can use a union mask. The existing vertebral model has six output channels; verify the precise class/channel mapping before training.
-- **Synopsis-aligned experiment:** build the specified 2D nnU-Net v2 segmentation pipeline. Treat the existing ResNet-34 U-Net weights as a separate baseline unless a tensor-compatible transfer path is demonstrated and tested.
-- Select and document the primary Model A implementation before opening the locked test set. If the final method differs from the synopsis, amend the synopsis with supervisor/statistician approval.
+- Fine-tune the existing `backend/weights/hrnet_landmarks.pt` HRNet-W32 checkpoint with the existing 22 output channels.
+- Preserve the original 22 channels: four corners for L1–L5 and two S1 endpoints.
+- Do not add femoral-centre channels; use the shared femoral U-Net and two-disc fitter.
+- Retain U-Net presence evidence as in the source pipeline, so HRNet cannot create unsupported vertebral levels without presence/QC evidence.
+- Use the same S1 detector, femoral branch, image transforms, angle calculator and QC as Model A.
 
-Geometry extraction must use explicit L1 and S1 superior-endplate lines and two independently supported femoral-head centres. A combined femoral mask centroid is prohibited as a substitute for the bicoxofemoral midpoint. Record per-angle pass/withheld status and the exact QC reason.
+## Phase 5 — transfer-learning safeguards
 
-## Phase 3 — Model B: direct landmarks
+The public source repository does not include the original lumbar training dataset or full training loop/hyperparameter recipe. The local fine-tuning procedure must therefore be specified and recorded as this study's protocol, not described as exact reproduction of the original training experiment.
 
-Use the existing HRNet-W32 checkpoint as the initialization candidate.
+- Start every experiment from the original source checkpoint; do not chain fine-tuned checkpoints.
+- Evaluate unchanged source checkpoints as baselines.
+- Use conservative learning-rate/encoder-freezing or regularization experiments on development data only.
+- Use accepted `segmented`, corrected `edited`, and missed-but-manually-placed `manual` examples as positive labels.
+- Treat `not_placed` as ignored; use `not_visible` as a negative only when explicitly confirmed.
+- Maintain a frozen development benchmark and check for regression/catastrophic forgetting.
+- Select optimizer, learning rate, batch size, epochs, loss weights and augmentation from development-only pilot experiments; freeze them before test evaluation.
 
-The existing checkpoint has 22 heatmap channels. A candidate transfer plan is:
-- Preserve the original 22 channels and their learned weights.
-- Add two heatmap channels for FH1_CENTER and FH2_CENTER.
-- Initialize the new channels explicitly.
-- Fine-tune on the six mandatory points plus the original vertebral landmarks where labels are available.
-- Keep the original 22-channel model untouched as the baseline.
+## Phase 6 — locked evaluation
 
-The model must expose independent femoral centres and uncertainty/withholding logic. A heatmap peak alone is not proof that the head is independently visible.
+Report:
+- Parameter-specific MAE, median absolute error, signed bias and patient-level bootstrap 95% CIs for PI, PT, SS and LL.
+- Per-parameter coverage, four-angle coverage and withholding reasons.
+- Bland–Altman bias and limits of agreement; ICC(A,1) with CIs.
+- Paired Model A/Model B absolute-error differences on the same test patients with valid outputs; report coverage differences separately.
+- L1–L5 class-wise Dice, femoral union-mask Dice, line-angle error, keypoint localization error, femoral-centre error and runtime.
+- Screened, excluded, reference-ineligible, attempted, accepted and withheld denominators.
 
-## Phase 4 — training controls
+Missing/withheld values must never be set to zero. A model must not appear more accurate merely because it abstains on difficult cases.
 
-- Use only the 240 training cases for gradient updates.
-- Use only the 60 validation cases for early stopping, architecture selection, hyperparameters, and QC-threshold calibration.
-- Never use the 100 locked test cases for model selection or iterative debugging.
-- Start from a clean copy of the source checkpoint for each experiment; do not chain fine-tunes without recording ancestry.
-- Record optimizer, learning rate, schedule, batch size, epochs, augmentations, loss weights, random seed, software versions, GPU, and checkpoint-selection rule.
-- Use conservative augmentation that preserves anatomical plausibility and transforms all annotations consistently.
-- Compare against the unchanged source model on the same locked cases.
-- Preserve a best-validation checkpoint and a final reproducible training log.
+## Phase 7 — ONNX export and versioning
 
-Exact hyperparameters are intentionally not fixed in this scaffold; choose them through development-only pilot experiments and record them before test evaluation.
+- Add custom-checkpoint arguments to the ONNX exporter.
+- Export each selected checkpoint and run ONNX graph validation.
+- Compare PyTorch and ONNX outputs numerically on synthetic/approved development examples.
+- Record source checkpoint SHA-256, ONNX SHA-256, config, dataset-manifest hash, annotation version and software versions.
+- Register new model IDs; do not overwrite the original source model.
+- Keep baseline and fine-tuned models selectable with a rollback path.
 
-## Phase 5 — locked evaluation
+## Colab
 
-For each model, report:
-- Parameter-specific MAE, median absolute error, signed bias, and 95% confidence intervals for PI, PT, SS, and LL.
-- Per-parameter valid-output coverage and withholding reasons.
-- Complete four-angle coverage among reference-eligible test cases.
-- Bland–Altman bias and limits of agreement.
-- ICC(A,1) with confidence intervals.
-- Paired absolute-error differences on the same patients where both models return valid results; report coverage differences separately.
-- Landmark error and segmentation Dice where applicable.
-- L1/S1 line-angle error, femoral-centre error, runtime, and failure categories.
-
-Report all denominators. Do not set withheld outputs to zero. Do not compare MAE without also reporting coverage; a model must not look better merely by abstaining on difficult cases.
-
-## Phase 6 — export and application integration
-
-After a model passes the predeclared internal benchmark:
-1. Export a custom ONNX graph from the selected PyTorch checkpoint.
-2. Add a custom-checkpoint option to the exporter.
-3. Check ONNX graph validity and numerical parity against PyTorch.
-4. Verify source-image coordinate restoration on real approved radiographs.
-5. Add a new model ID; do not overwrite the original model.
-6. Record checkpoint SHA-256, ONNX SHA-256, training-data manifest hash, annotation version, and evaluation report.
-7. Keep original and custom models selectable, with rollback.
-
-No model should be described as clinically validated or safe for diagnostic use on the basis of this internal retrospective experiment.
+Colab is conditional on written UHS and site-specific permission. If approval is absent, use institution-controlled compute. Never commit patient images, masks, annotations, reference readings or weights to this public repository.
