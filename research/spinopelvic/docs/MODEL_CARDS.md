@@ -40,7 +40,7 @@ These are research component descriptions, not claims of clinical validation.
 - Centre extraction: source backend.femoral.fit_two_discs union-of-two-discs fit.
 - New training entry point: tools/train_femoral_unet.py. This is a newly specified study recipe, not an exact reproduction of an unpublished historical training run.
 - Key risks: near-total head overlap, edge truncation, pelvis/femur superposition, poor union-mask fit and false hip-axis certainty.
-- Required reporting: union Dice/IoU, centre error, fit acceptance, edge-truncation rate and PI/PT withholding rate.
+- Required reporting: positive-reference union-mask Dice/IoU, empty-reference specificity, centre error, fit acceptance, edge-truncation rate and PI/PT withholding rate. Empty-reference cases are reported separately and are not counted as Dice=1 to inflate the positive-case score.
 
 ## Shared geometry and QC
 
