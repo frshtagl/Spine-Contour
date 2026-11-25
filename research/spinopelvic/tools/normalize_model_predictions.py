@@ -177,7 +177,8 @@ def _apply_vertebra_mask(record: dict[str, Any], mask: np.ndarray) -> dict[str, 
     for level in LEVELS:
         body = quadrilaterals.get(level)
         mask_record = record["masks"][level]
-        mask_record["model_polygons"] = [body["quadrilateral"]] if body is not None else []
+        quad = [[float(point[0]), float(point[1])] for point in body["quadrilateral"]] if body is not None else None
+        mask_record["model_polygons"] = [quad] if quad is not None else []
         if body is None:
             continue
         for edge_name, points in (("superior", body["superior"]), ("inferior", body["inferior"])):
