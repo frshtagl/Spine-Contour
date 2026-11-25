@@ -1,0 +1,47 @@
+# All study data and derived artifacts must remain outside this public repository.
+data/
+datasets/
+raw/
+masks/
+annotations/private/
+reference_readings/
+patient_manifests/
+splits/private/
+checkpoints/
+runs/
+outputs/
+results/private/
+exports/private/
+colab/private/
+
+# Common medical image and annotation artifacts.
+*.dcm
+*.dicom
+*.nii
+*.nii.gz
+*.nrrd
+*.mha
+*.mhd
+*.png
+*.jpg
+*.jpeg
+*.tif
+*.tiff
+*.bmp
+*.webp
+
+# Training artifacts and serialized datasets.
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+*.pkl
+*.pickle
+*.parquet
+*.h5
+*.hdf5
+
+# Local logs and notebook checkpoints.
+*.log
+.ipynb_checkpoints/

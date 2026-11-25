@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "spinopelvic.annotation/0.1",
+  "title": "Spinopelvic research polygon and landmark annotation",
+  "description": "Draft research annotation record. Coordinates are in the original stored image pixel frame, origin at top-left. No direct patient identifiers are permitted.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "study_id",
+    "image",
+    "annotation",
+    "masks",
+    "landmarks"
+  ],
+  "properties": {
+    "schema_version": { "const": "spinopelvic.annotation/0.1" },
+    "study_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$",
+      "description": "Coded study identifier only; not a patient name, MRN, accession number, or date of birth."
+    },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "width_px", "height_px", "view", "anterior_side"],
+      "properties": {
+        "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+        "width_px": { "type": "integer", "minimum": 1 },
+        "height_px": { "type": "integer", "minimum": 1 },
+        "view": { "const": "standing_lateral" },
+        "anterior_side": { "enum": ["image_left", "image_right", "unknown"] },
+        "pixel_spacing_mm": {
+          "oneOf": [
+            {
+              "type": "array",
+              "prefixItems": [
+                { "type": "number", "exclusiveMinimum": 0 },
+                { "type": "number", "exclusiveMinimum": 0 }
+              ],
+              "minItems": 2,
+              "maxItems": 2
+            },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "annotation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reader_code", "protocol_version", "stage"],
+      "properties": {
+        "reader_code": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,32}$" },
+        "protocol_version": { "type": "string", "minLength": 1 },
+        "stage": { "enum": ["pilot", "development", "locked_test_reference"] }
+      }
+    },
+    "masks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "L1", "L2", "L3", "L4", "L5",
+        "S1_SUPERIOR_ENDPLATE",
+        "FEMORAL_REGION_UNION",
+        "FEMORAL_HEAD_1",
+        "FEMORAL_HEAD_2"
+      ],
+      "properties": {
+        "L1": { "$ref": "#/$defs/mask" },
+        "L2": { "$ref": "#/$defs/mask" },
+        "L3": { "$ref": "#/$defs/mask" },
+        "L4": { "$ref": "#/$defs/mask" },
+        "L5": { "$ref": "#/$defs/mask" },
+        "S1_SUPERIOR_ENDPLATE": { "$ref": "#/$defs/mask" },
+        "FEMORAL_REGION_UNION": { "$ref": "#/$defs/mask" },
+        "FEMORAL_HEAD_1": { "$ref": "#/$defs/mask" },
+        "FEMORAL_HEAD_2": { "$ref": "#/$defs/mask" }
+      }
+    },
+    "landmarks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "L1_SUP_ANT", "L1_SUP_POST",
+        "S1_SUP_ANT", "S1_SUP_POST",
+        "FH1_CENTER", "FH2_CENTER"
+      ],
+      "properties": {
+        "L1_SUP_ANT": { "$ref": "#/$defs/landmark" },
+        "L1_SUP_POST": { "$ref": "#/$defs/landmark" },
+        "S1_SUP_ANT": { "$ref": "#/$defs/landmark" },
+        "S1_SUP_POST": { "$ref": "#/$defs/landmark" },
+        "FH1_CENTER": { "$ref": "#/$defs/landmark" },
+        "FH2_CENTER": { "$ref": "#/$defs/landmark" }
+      }
+    }
+  },
+  "$defs": {
+    "point": {
+      "type": "array",
+      "prefixItems": [
+        { "type": "number" },
+        { "type": "number" }
+      ],
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "polygon": {
+      "type": "array",
+      "minItems": 3,
+      "items": { "$ref": "#/$defs/point" }
+    },
+    "mask": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "polygons"],
+      "properties": {
+        "status": {
+          "enum": ["annotated", "partial", "not_visible", "not_separable", "not_annotated"]
+        },
+        "polygons": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/polygon" }
+        },
+        "uncertainty_note": { "type": ["string", "null"] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "enum": ["annotated", "partial"] } }, "required": ["status"] },
+          "then": { "properties": { "polygons": { "minItems": 1 } } }
+        },
+        {
+          "if": { "properties": { "status": { "enum": ["not_visible", "not_separable", "not_annotated"] } }, "required": ["status"] },
+          "then": { "properties": { "polygons": { "maxItems": 0 } } }
+        }
+      ]
+    },
+    "landmark": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "point", "uncertainty"],
+      "properties": {
+        "status": {
+          "enum": ["annotated", "not_visible", "not_separable", "not_annotated", "uncertain"]
+        },
+        "point": {
+          "oneOf": [
+            { "$ref": "#/$defs/point" },
+            { "type": "null" }
+          ]
+        },
+        "uncertainty": { "enum": ["clear", "uncertain", "not_assessable"] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "annotated" } }, "required": ["status"] },
+          "then": {
+            "properties": {
+              "point": { "$ref": "#/$defs/point" },
+              "uncertainty": { "const": "clear" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "status": { "enum": ["not_visible", "not_separable", "not_annotated"] } }, "required": ["status"] },
+          "then": { "properties": { "point": { "type": "null" } } }
+        }
+      ]
+    }
+  }
+}
