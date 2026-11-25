@@ -122,13 +122,92 @@ def analyze(rows: list[dict[str, Any]], bootstrap: int = 2000, seed: int = 42) -
     report: dict[str, Any] = {"schema_version": "spinecontour-spinopelvic-agreement/1", "analysis": {}}
     for idx, ((model, parameter), items) in enumerate(sorted(grouped.items())):
         report["analysis"].setdefault(model, {})[parameter] = _summary(items, bootstrap, seed + idx)
+    report["pairwise_comparisons"] = pairwise_comparisons(rows, bootstrap, seed)
     report["interpretation_notes"] = [
         "Coverage is reported beside accuracy; withheld predictions are never imputed as zero.",
         "Bland–Altman limits use the SD of paired prediction-minus-reference differences.",
         "ICC(A,1) is a two-way random-effects, absolute-agreement, single-measure ICC; interpret with coverage and error metrics, not alone.",
         "Bootstrap resampling is clustered by coded patient_group_code to account for repeated examinations per patient.",
+        "Pairwise model differences use only studies with valid predictions from both models and are bootstrapped by patient group.",
         "This report is descriptive internal validation; it does not establish clinical utility or external validity.",
     ]
+    return report
+
+
+def pairwise_comparisons(rows: list[dict[str, Any]], bootstrap: int, seed: int) -> dict[str, Any]:
+    """Paired model comparisons on shared reference studies, clustered by patient."""
+    by_parameter: dict[str, dict[str, dict[str, dict[str, Any]]]] = defaultdict(lambda: defaultdict(dict))
+    for row in rows:
+        by_parameter[row["parameter"]][row["model_id"]][row["study_id"]] = row
+    report: dict[str, Any] = {}
+    pair_index = 0
+    for parameter, models in sorted(by_parameter.items()):
+        model_names = sorted(models)
+        if len(model_names) < 2:
+            continue
+        report[parameter] = {}
+        reference_by_study: dict[str, float] = {}
+        patient_by_study: dict[str, str] = {}
+        for model_map in models.values():
+            for sid, row in model_map.items():
+                if row["reference"] is None:
+                    continue
+                if sid in reference_by_study and abs(reference_by_study[sid] - row["reference"]) > 1e-6:
+                    raise ValueError(f"Models have different reference values for {sid} / {parameter}")
+                if sid in patient_by_study and patient_by_study[sid] != row["patient_group_code"]:
+                    raise ValueError(f"Models have different patient-group codes for {sid}")
+                reference_by_study[sid] = row["reference"]
+                patient_by_study[sid] = row["patient_group_code"]
+        for index_a, model_a in enumerate(model_names):
+            for model_b in model_names[index_a + 1:]:
+                map_a, map_b = models[model_a], models[model_b]
+                valid_a = {sid for sid, row in map_a.items() if row["reference"] is not None and row["prediction"] is not None}
+                valid_b = {sid for sid, row in map_b.items() if row["reference"] is not None and row["prediction"] is not None}
+                matched = sorted(valid_a & valid_b)
+                n_reference = len(reference_by_study)
+                coverage_a = len(valid_a) / n_reference if n_reference else None
+                coverage_b = len(valid_b) / n_reference if n_reference else None
+                item: dict[str, Any] = {
+                    "n_reference": n_reference,
+                    "n_matched_predictions": len(matched),
+                    "n_patient_groups_matched": len({patient_by_study[sid] for sid in matched}),
+                    "coverage_model_a": coverage_a,
+                    "coverage_model_b": coverage_b,
+                    "coverage_difference_a_minus_b": coverage_a - coverage_b if coverage_a is not None and coverage_b is not None else None,
+                }
+                if matched:
+                    errors_a = np.asarray([map_a[sid]["prediction"] - reference_by_study[sid] for sid in matched], dtype=float)
+                    errors_b = np.asarray([map_b[sid]["prediction"] - reference_by_study[sid] for sid in matched], dtype=float)
+                    abs_diff = np.abs(errors_a) - np.abs(errors_b)
+                    signed_diff = errors_a - errors_b
+                    item["paired_mae_difference_deg_a_minus_b"] = float(abs_diff.mean())
+                    item["paired_bias_difference_deg_a_minus_b"] = float(signed_diff.mean())
+                else:
+                    abs_diff = signed_diff = np.asarray([], dtype=float)
+                    item["paired_mae_difference_deg_a_minus_b"] = None
+                    item["paired_bias_difference_deg_a_minus_b"] = None
+                if bootstrap > 0 and matched:
+                    clusters: dict[str, list[int]] = defaultdict(list)
+                    for idx, sid in enumerate(matched):
+                        clusters[patient_by_study[sid]].append(idx)
+                    keys = sorted(clusters)
+                    rng = random.Random(seed + pair_index)
+                    mae_samples, bias_samples = [], []
+                    for _ in range(bootstrap):
+                        sampled = [rng.choice(keys) for _ in keys]
+                        idxs = [i for key in sampled for i in clusters[key]]
+                        mae_samples.append(float(abs_diff[idxs].mean()))
+                        bias_samples.append(float(signed_diff[idxs].mean()))
+                    item["paired_difference_95ci"] = {
+                        "mae_a_minus_b_deg": [float(np.percentile(mae_samples, 2.5)), float(np.percentile(mae_samples, 97.5))],
+                        "bias_a_minus_b_deg": [float(np.percentile(bias_samples, 2.5)), float(np.percentile(bias_samples, 97.5))],
+                        "resamples": bootstrap,
+                        "cluster_unit": "patient_group_code",
+                    }
+                else:
+                    item["paired_difference_95ci"] = None
+                report[parameter][f"{model_a}_vs_{model_b}"] = item
+                pair_index += 1
     return report
 
 
