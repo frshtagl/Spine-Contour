@@ -19,10 +19,37 @@ if [[ "$ACTUAL_SHA256" != "$EXPECTED_SHA256" ]]; then
   exit 3
 fi
 
-if tar -tzf "$ARCHIVE" | grep -E '(^/|(^|/)\.\.(/|$))' >/dev/null; then
-  echo "Archive contains an unsafe path. Stop and inspect." >&2
-  exit 5
-fi
+python3 - "$ARCHIVE" <<'PY'
+import pathlib
+import sys
+import tarfile
+
+archive = sys.argv[1]
+blocked = {
+    ".pt", ".pth", ".ckpt", ".onnx", ".safetensors", ".pkl", ".pickle",
+    ".parquet", ".npy", ".npz", ".h5", ".hdf5", ".dcm", ".dicom",
+    ".nii", ".nrrd", ".mha", ".mhd", ".png", ".jpg", ".jpeg",
+    ".tif", ".tiff", ".bmp", ".webp", ".zip",
+}
+roots = set()
+with tarfile.open(archive, "r:gz") as bundle:
+    members = bundle.getmembers()
+    if not members:
+        raise SystemExit("Archive is empty")
+    for member in members:
+        path = pathlib.PurePosixPath(member.name)
+        if path.is_absolute() or ".." in path.parts:
+            raise SystemExit(f"Unsafe archive path: {member.name}")
+        if not (member.isfile() or member.isdir()):
+            raise SystemExit(f"Links/special archive entries are not allowed: {member.name}")
+        if path.parts:
+            roots.add(path.parts[0])
+        name = member.name.lower()
+        if any(name.endswith(suffix) for suffix in blocked) or name.endswith(".nii.gz"):
+            raise SystemExit(f"Unexpected model/data file in source-only archive: {member.name}")
+if len(roots) != 1:
+    raise SystemExit(f"Expected one top-level archive folder, found: {sorted(roots)}")
+PY
 
 if [[ -e "$DEST" && -n "$(find "$DEST" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)" ]]; then
   echo "Destination is not empty: $DEST. Preserve it and choose a new clone/worktree rather than overwriting." >&2
@@ -31,7 +58,7 @@ fi
 mkdir -p "$DEST"
 tar -xzf "$ARCHIVE" --strip-components=1 -C "$DEST"
 
-if find "$DEST" -type f \( -name '*.pt' -o -name '*.pth' -o -name '*.ckpt' -o -name '*.onnx' -o -name '*.dcm' -o -name '*.dicom' -o -name '*.nii' -o -name '*.nii.gz' -o -name '*.png' -o -name '*.jpg' -o -name '*.jpeg' -o -name '*.tif' -o -name '*.tiff' \) | grep -q .; then
+if find "$DEST" -type f \( -name '*.pt' -o -name '*.pth' -o -name '*.ckpt' -o -name '*.onnx' -o -name '*.dcm' -o -name '*.dicom' -o -name '*.nii' -o -name '*.nii.gz' -o -name '*.png' -o -name '*.jpg' -o -name '*.jpeg' -o -name '*.tif' -o -name '*.tiff' -o -name '*.bmp' -o -name '*.webp' -o -name '*.nrrd' -o -name '*.mha' -o -name '*.mhd' -o -name '*.npy' -o -name '*.npz' -o -name '*.h5' -o -name '*.hdf5' -o -name '*.pkl' -o -name '*.pickle' -o -name '*.parquet' -o -name '*.safetensors' -o -name '*.zip' \) | grep -q .; then
   echo "Unexpected binary model/data artifact found in source-only archive. Stop and inspect." >&2
   exit 6
 fi
