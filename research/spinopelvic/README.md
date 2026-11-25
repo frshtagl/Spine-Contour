@@ -115,3 +115,7 @@ The spinopelvic workspace is on the separate branch research/spinopelvic-lab, no
 The exact source-derived editor method is recorded in docs/ANNOTATION_STRATEGY_EXACT.md. The repository state and missing implementation components are recorded in docs/REPOSITORY_CROSS_CHECK_2026-11-25.md.
 
 Run python research/spinopelvic/tools/audit_research_branch.py from a clone to check expected files and Git LFS checkpoint status. The research branch remains a scaffold until the missing split, dataset, training, evaluation, export and end-to-end framing components are implemented and tested.
+
+## Recovered source kits and checkpoint staging
+
+See [recovered kits](recovered_kits/README.md) for the three user-supplied fine-tuning packages, archive/checkpoint fingerprints, upstream LFS comparison and private-import instructions. Do not upload recovered checkpoint binaries or patient-linked data while this fork is public.
