@@ -149,18 +149,70 @@ python research/spinopelvic/tools/train_femoral_unet.py \
 
 These runs initialize from the original fork checkpoints. Do not chain one fine-tune into another unless that is a separately pre-registered experiment. The recovered U-Net/HRNet/S1 scripts contain historical training assumptions; compare the unchanged source baseline on the same validation cohort and report all new hyperparameters. The femoral script is a new research recipe, not the original hidden recipe. Its validation Dice/IoU are computed on positive-reference cases only; empty-reference specificity is reported separately so negative-only images cannot inflate the positive Dice score.
 
-## 6. Geometry and agreement analysis
+## 6. Normalize model predictions into separate model records
+
+Create empty base templates with reader_code MODEL using the same coded study/image metadata. Do not pass a human-reader annotation folder as the base: the normalizer deliberately clears human point/box/polygon fields and writes predictions into model_point, model_bbox and model_polygons.
+
+The recovered HRNet and S1 predict.py scripts write predictions.json. The recovered vertebral U-Net predict.py writes one original-frame label mask per image. Example source-kit inference commands:
+
+~~~bash
+python research/spinopelvic/recovered_kits/source_bundle/contents/hrnet_landmarks_finetune/predict.py \
+  --img_dir /secure/spinopelvic/model_inputs/hrnet/images \
+  --ckpt /secure/spinopelvic/runs/hrnet/best.pt \
+  --out /secure/spinopelvic/predictions/hrnet
+
+python research/spinopelvic/recovered_kits/source_bundle/contents/s1_finetune/predict.py \
+  --img_dir /secure/spinopelvic/model_inputs/s1/images \
+  --ckpt /secure/spinopelvic/runs/s1/best.pt \
+  --out /secure/spinopelvic/predictions/s1
+
+python research/spinopelvic/recovered_kits/source_bundle/contents/vertebra_unet_finetune/predict.py \
+  --img_dir /secure/spinopelvic/model_inputs/vertebra/images \
+  --ckpt /secure/spinopelvic/runs/vertebra_unet/best.pt \
+  --out /secure/spinopelvic/predictions/vertebra
+~~~
+
+Normalize an HRNet route (S1 detector and femoral masks may be added as shared downstream components):
+
+~~~bash
+python research/spinopelvic/tools/normalize_model_predictions.py \
+  --base-annotations /secure/spinopelvic/annotations/MODEL \
+  --images /secure/spinopelvic/images \
+  --hrnet-predictions /secure/spinopelvic/predictions/hrnet/predictions.json \
+  --s1-predictions /secure/spinopelvic/predictions/s1/predictions.json \
+  --femoral-mask-dir /secure/spinopelvic/predictions/femoral/masks \
+  --model-name HRNet-S1-Femoral \
+  --model-version experiment-01 \
+  --component-manifest /secure/spinopelvic/checkpoint_hashes.json \
+  --hrnet-raw-score-min 0.0 --s1-score-min 0.0 \
+  --min-femoral-fit-confidence 0.0 --min-femoral-iou 0.0 \
+  --out /secure/spinopelvic/predictions/normalized_hrnet
+~~~
+
+Normalize a separate vertebral U-Net route by replacing --hrnet-predictions with --vertebra-mask-dir. Do not supply HRNet and vertebral U-Net together: both predict L1-L5 geometry and the normalizer intentionally rejects that combination. If HRNet and S1 predictions are both supplied, S1 detector points take precedence for S1; this precedence is recorded in the prediction manifest.
+
+The score thresholds above are placeholders only. Freeze them using development validation and the approved QC plan; HRNet raw heatmap peaks are not calibrated probabilities. The normalizer writes raw scores, accepted model points and rejected raw points into a secure prediction manifest. It never overwrites human-reviewed point/box/polygon fields in the base annotation files.
+
+Validate the normalized prediction records:
+
+~~~bash
+python research/spinopelvic/tools/validate_annotations.py /secure/spinopelvic/predictions/normalized_hrnet
+~~~
+
+## 7. Geometry and agreement analysis
+
 
 Compute source-compatible geometry from a selected reader's annotation records:
 
 ~~~
 python research/spinopelvic/tools/compute_measurements_from_annotations.py \
   --annotations /secure/spinopelvic/annotations/R1 \
-  --reader-code R1 \
-  --out /secure/spinopelvic/measurements/R1_source_geometry.csv
+  --reader-code MODEL \
+  --min-model-score 0.0 \
+  --out /secure/spinopelvic/measurements/model_source_geometry.csv
 ~~~
 
-The tool calls the fork's existing backend.utils.spinopelvic_measurements_from_geometry implementation. The same tool can process model-output records if they are converted to the research annotation schema with the model's points/masks and a model identifier used as reader_code.
+The tool calls the fork's existing backend.utils.spinopelvic_measurements_from_geometry implementation. For model predictions, use the normalized prediction annotation folder and its MODEL reader_code. The optional --min-model-score applies a single additional numeric threshold; prefer the per-component thresholds frozen in the normalizer because HRNet heatmap peaks, S1 detection scores and femoral fit confidence are on different scales.
 
 Prepare a paired analysis CSV with columns:
 
@@ -177,7 +229,7 @@ python research/spinopelvic/analysis/analyze_agreement.py \
 
 The report includes coverage, MAE, median absolute error, bias, RMSE, Bland–Altman limits, ICC(A,1), and patient-cluster bootstrap intervals. Interpret ICC alongside error and coverage; it is not a substitute for clinical review.
 
-## 7. Export selected custom checkpoints
+## 8. Export selected custom checkpoints
 
 After development-only selection:
 
@@ -190,6 +242,6 @@ python research/spinopelvic/tools/export_custom_checkpoint.py \
 
 Repeat for femoral, hrnet and s1. The exporter strict-loads the selected state dictionary, validates the ONNX graph and checks PyTorch/ONNX parity on synthetic random and zero inputs. This is graph validation, not real-image parity or clinical validation.
 
-## 8. Locked-test rule
+## 9. Locked-test rule
 
 Open the 100-case locked test set once the model, thresholds, QC/withholding policy and analysis code are frozen. Report every attempted case, valid output, withheld output, exclusion and reason. Do not iterate on the test set; any post-test change requires a new independent evaluation cohort or a clearly labelled exploratory analysis.
