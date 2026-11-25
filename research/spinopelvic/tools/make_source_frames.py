@@ -166,7 +166,8 @@ def main() -> int:
                         raise ValueError(f"Image size changed before framing: {source.name}")
                     save_tiff(image[top:bottom, left:right], out_base / task / "images" / frame["framed_file"])
                     mask_path = src_masks / f"{source.stem}.png"
-                    mask = np.asarray(Image.open(mask_path), dtype=np.uint8)
+                    with Image.open(mask_path) as mask_image:
+                        mask = np.asarray(mask_image, dtype=np.uint8)
                     if mask.shape != image.shape:
                         raise ValueError(f"Mask/image size mismatch before framing: {source.name}")
                     (out_base / task / "masks").mkdir(parents=True, exist_ok=True)
