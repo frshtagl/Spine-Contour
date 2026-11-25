@@ -84,3 +84,12 @@ The public repository includes the lumbar model architectures/checkpoints and in
 5. Freeze the approved protocol, reader/adjudication plan and seed; generate the real patient-disjoint split in secure storage.
 6. Run a small approved pilot, then development-only training/selection. Open the locked test only once after all thresholds, QC and analysis are frozen.
 7. Colab orchestration remains optional and must not be used unless the institution/site explicitly approves the proposed de-identified data transfer and processing.
+
+
+## 2026-11-25 — CI retry and static validation
+
+- Re-ran the research-branch GitHub Actions workflow on commit 51f70a4a: all 23 synthetic unit tests passed.
+- Expanded the workflow to compile every Python file under research/spinopelvic/tools and analysis, parse every committed JSON file, and run bash syntax validation on the source-bundle importer.
+- The expanded workflow passed on commit 395e01efeb5940c36d015ea474a175593950ef80: compile step passed, JSON/shell syntax step passed, and all 23 tests passed.
+- Workflow: https://github.com/frshtagl/Spine-Contour/actions/runs/45593495670
+- This remains synthetic/static validation only. It does not load trained checkpoint tensors, execute model inference on radiographs, train a model or validate clinical performance.
