@@ -183,7 +183,8 @@
       700,
       900
     ],
-    "uncertainty_note": null
+    "uncertainty_note": null,
+    "model_bbox": null
   },
   "landmarks": {
     "L1_SA": {
