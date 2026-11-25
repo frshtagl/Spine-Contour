@@ -22,7 +22,7 @@ The 300 development cases are annotated and split into train/validation. The 100
 
 ## Phase 2 — dataset builder
 
-Implement a deterministic builder that:
+Implemented in tools/make_annotation_templates.py, tools/validate_annotations.py, tools/prepare_splits.py and tools/build_training_inputs.py. The local workflow:
 - Validates records against `schemas/annotation.schema.json`.
 - Joins image/annotation records by image SHA-256.
 - Checks duplicate images and patient-group leakage.
@@ -36,6 +36,8 @@ Implement a deterministic builder that:
 
 ## Phase 3 — Model A: U-Net segmentation route
 
+The recovered user-supplied vertebral U-Net training script is in the source-only archive; the new femoral U-Net trainer is in tools/train_femoral_unet.py. No training run has been performed.
+
 - Fine-tune `backend/weights/vertebra_unet.pt` with L1–L5/background masks, after verifying the six-class channel semantics against the actual checkpoint.
 - Fine-tune `backend/weights/femoral_unet.pt` with the binary femoral union mask.
 - Fine-tune `backend/weights/s1_keypointrcnn.pt` with S1 bounding boxes and two S1 keypoints.
@@ -44,6 +46,8 @@ Implement a deterministic builder that:
 - Calculate PI, PT, SS and LL with the shared geometry module.
 
 ## Phase 4 — Model B: HRNet landmark route
+
+The recovered HRNet training script is in the source-only archive. No training run has been performed.
 
 - Fine-tune the existing `backend/weights/hrnet_landmarks.pt` HRNet-W32 checkpoint with the existing 22 output channels.
 - Preserve the original 22 channels: four corners for L1–L5 and two S1 endpoints.
@@ -77,7 +81,9 @@ Missing/withheld values must never be set to zero. A model must not appear more 
 
 ## Phase 7 — ONNX export and versioning
 
-- Add custom-checkpoint arguments to the ONNX exporter.
+The custom-checkpoint exporter is implemented at tools/export_custom_checkpoint.py. It strict-loads the state dictionary, checks the ONNX graph and compares PyTorch/ONNX outputs on synthetic inputs. This is not real-image parity or clinical validation.
+
+- Run the exporter on each selected custom checkpoint.
 - Export each selected checkpoint and run ONNX graph validation.
 - Compare PyTorch and ONNX outputs numerically on synthetic/approved development examples.
 - Record source checkpoint SHA-256, ONNX SHA-256, config, dataset-manifest hash, annotation version and software versions.
@@ -87,3 +93,8 @@ Missing/withheld values must never be set to zero. A model must not appear more 
 ## Colab
 
 Colab is conditional on written UHS and site-specific permission. If approval is absent, use institution-controlled compute. Never commit patient images, masks, annotations, reference readings or weights to this public repository.
+
+
+## Implementation status — 25 November 2026
+
+The deterministic split generator, schema-checked dataset builder, source-compatible measurement extraction, agreement analysis, femoral U-Net training entry point and custom-checkpoint ONNX exporter are now present in the research branch. The U-Net/HRNet/S1 training loops are preserved in the source-only archive and imported locally using the hash-verifying script. Actual strict checkpoint loading, fine-tuning, end-to-end predicted S1 framing, Colab orchestration and locked-test evaluation remain pending.
