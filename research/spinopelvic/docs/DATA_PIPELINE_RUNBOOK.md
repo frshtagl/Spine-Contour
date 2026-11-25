@@ -177,7 +177,7 @@ These runs initialize from the original fork checkpoints. Do not chain one fine-
 
 ## 6. Normalize model predictions into separate model records
 
-Create a separate coded CSV with reader_code MODEL for the same study/image metadata, then generate empty templates. Do not pass a human-reader annotation folder as the base:
+Initially create a separate coded CSV with reader_code MODEL for development/validation studies only, then generate empty templates. Keep locked-test MODEL templates separate until the model and thresholds are frozen. Do not pass a human-reader annotation folder as the base:
 
 ~~~bash
 python research/spinopelvic/tools/make_annotation_templates.py \
@@ -236,7 +236,7 @@ python research/spinopelvic/tools/normalize_model_predictions.py \
 
 Normalize a separate vertebral U-Net route by replacing --hrnet-predictions with --vertebra-mask-dir /secure/spinopelvic/predictions/vertebra (the recovered predict.py writes *_mask.png files). Do not supply HRNet and vertebral U-Net together: both predict L1-L5 geometry and the normalizer intentionally rejects that combination. If HRNet and S1 predictions are both supplied, S1 detector points take precedence for S1; this precedence is recorded in the prediction manifest.
 
-The femoral mask directory contains S1 crop-frame masks from predict_femoral_unet.py; the normalizer restores them to original radiograph coordinates using frame_manifest_all.json. The same manifest restores HRNet points and U-Net masks. The component-manifest JSON should record the exact checkpoint SHA-256 values used for this run. The score thresholds above are placeholders only. Freeze them using development validation and the approved QC plan; HRNet raw heatmap peaks are not calibrated probabilities. The normalizer writes raw scores, accepted model points and rejected raw points into a secure prediction manifest. It never overwrites human-reviewed point/box/polygon fields in the base annotation files.
+The femoral mask directory contains S1 crop-frame masks from predict_femoral_unet.py; the normalizer restores them to original radiograph coordinates using frame_manifest_all.json. The same manifest restores HRNet points and U-Net masks. Copy research/spinopelvic/configs/checkpoint_manifest.example.json to secure local experiment storage and fill in the exact baseline/selected checkpoint hashes, byte counts, preprocessing version and frozen thresholds. The component-manifest JSON should record the exact checkpoint SHA-256 values used for this run. The score thresholds above are placeholders only. Freeze them using development validation and the approved QC plan; HRNet raw heatmap peaks are not calibrated probabilities. The normalizer writes raw scores, accepted model points and rejected raw points into a secure prediction manifest. It never overwrites human-reviewed point/box/polygon fields in the base annotation files.
 
 Validate the normalized prediction records:
 
