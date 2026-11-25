@@ -17,7 +17,7 @@ from typing import Any
 LEVELS = ("L1", "L2", "L3", "L4", "L5")
 
 
-def _point(record: dict[str, Any], name: str) -> list[float] | None:
+def _point(record: dict[str, Any], name: str, min_model_score: float = 0.0) -> list[float] | None:
     item = record.get("landmarks", {}).get(name, {})
     if item.get("status") in {"segmented", "edited", "manual"}:
         return item.get("point")
@@ -25,15 +25,18 @@ def _point(record: dict[str, Any], name: str) -> list[float] | None:
     # leave the human-reviewed point empty. This allows parallel human/model
     # geometry without conflating the two annotation states.
     if record.get("model") is not None and item.get("model_point") is not None:
+        score = item.get("model_score")
+        if min_model_score > 0 and (score is None or score < min_model_score):
+            return None
         return item["model_point"]
     return None
 
 
-def geometry_from_record(record: dict[str, Any]) -> tuple[dict[str, Any], list[list[float]] | None, list[list[float]]]:
+def geometry_from_record(record: dict[str, Any], min_model_score: float = 0.0) -> tuple[dict[str, Any], list[list[float]] | None, list[list[float]]]:
     vertebrae: dict[str, Any] = {}
     for level in LEVELS:
-        sa, sp = _point(record, f"{level}_SA"), _point(record, f"{level}_SP")
-        ia, ip = _point(record, f"{level}_IA"), _point(record, f"{level}_IP")
+        sa, sp = _point(record, f"{level}_SA", min_model_score), _point(record, f"{level}_SP", min_model_score)
+        ia, ip = _point(record, f"{level}_IA", min_model_score), _point(record, f"{level}_IP", min_model_score)
         superior = [sa, sp] if sa is not None and sp is not None else None
         inferior = [ia, ip] if ia is not None and ip is not None else None
         if superior is None and inferior is None:
@@ -42,9 +45,9 @@ def geometry_from_record(record: dict[str, Any]) -> tuple[dict[str, Any], list[l
         if superior is not None and inferior is not None:
             body["quadrilateral"] = [sa, sp, ip, ia]
         vertebrae[level] = body
-    s1_sa, s1_sp = _point(record, "S1_SA"), _point(record, "S1_SP")
+    s1_sa, s1_sp = _point(record, "S1_SA", min_model_score), _point(record, "S1_SP", min_model_score)
     s1 = [s1_sa, s1_sp] if s1_sa is not None and s1_sp is not None else None
-    fh1, fh2 = _point(record, "FH1_CENTER"), _point(record, "FH2_CENTER")
+    fh1, fh2 = _point(record, "FH1_CENTER", min_model_score), _point(record, "FH2_CENTER", min_model_score)
     # The source geometry API accepts circle triples. The centre coordinates are
     # the only fields used for PI/PT; radius=1 is a neutral shape-valid placeholder,
     # not an estimated anatomical radius and is never reported as a measurement.
@@ -56,6 +59,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--annotations", type=Path, required=True)
     parser.add_argument("--reader-code", required=True)
+    parser.add_argument("--min-model-score", type=float, default=0.0, help="Optional pre-registered minimum raw model score; default 0 keeps all finite model points")
     parser.add_argument("--out", type=Path, required=True, help="CSV output in secure storage")
     parser.add_argument("--allow-in-repo", action="store_true", help="Only for synthetic tests; never use with real data")
     args = parser.parse_args()
@@ -80,7 +84,7 @@ def main() -> int:
                 continue
             if record.get("annotation", {}).get("reader_code") != args.reader_code:
                 continue
-            vertebrae, s1, circles = geometry_from_record(record)
+            vertebrae, s1, circles = geometry_from_record(record, args.min_model_score)
             try:
                 result = spinopelvic_measurements_from_geometry(vertebrae, s1, circles, allow_empty=True)
                 values = result["measurements"]
@@ -90,6 +94,7 @@ def main() -> int:
                     "image_sha256": record["image"]["sha256"],
                     "reader_code": args.reader_code,
                     "stage": record["annotation"]["stage"],
+                    "min_model_score": args.min_model_score,
                     "PI_deg": values["PI"],
                     "PT_deg": values["PT"],
                     "SS_deg": values["SS"],
