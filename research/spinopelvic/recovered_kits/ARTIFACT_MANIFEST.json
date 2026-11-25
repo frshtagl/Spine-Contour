@@ -1,61 +1,127 @@
 {
   "received_date": "2026-11-25",
-  "repository_visibility": "public",
-  "preservation_type": "metadata_and_hashes_only_in_GitHub; source_only_bundle_attached_in_chat; original_weights_and_case_data_not_uploaded",
+  "repository": {
+    "full_name": "frshtagl/Spine-Contour",
+    "research_branch": "research/spinopelvic-lab",
+    "visibility_at_audit": "public",
+    "default_branch": "main",
+    "note": "The connected GitHub integration can read/write repository contents but does not expose a repository-visibility update action. Do not upload recovered checkpoint binaries or case-level data until the owner changes visibility to private."
+  },
   "original_archives": {
     "files (3).zip": {
       "bytes": 100590618,
-      "sha256": "271f65da6b92b6d13706fdba3ed77e82f8a07bc6f9c5480e2c3f0dc73a3ac4e8"
+      "sha256": "271f65da6b92b6d13706fdba3ed77e82f8a07bc6f9c5480e2c3f0dc73a3ac4e8",
+      "contains": [
+        "nested vertebra U-Net fine-tuning kit",
+        "sample lateral radiograph",
+        "sample mask",
+        "overlays",
+        "statistics"
+      ]
     },
     "files (2).zip": {
       "bytes": 128607046,
-      "sha256": "22e7af165552c539569fd6983bcb0c531272f8f0110874a60558e8815bebb80c"
+      "sha256": "22e7af165552c539569fd6983bcb0c531272f8f0110874a60558e8815bebb80c",
+      "contains": [
+        "nested HRNet landmark fine-tuning kit",
+        "sample lateral radiograph",
+        "sample annotations",
+        "overlays",
+        "predictions",
+        "measurements"
+      ]
     },
     "s1_finetune_kit.zip": {
       "bytes": 224272996,
-      "sha256": "7def5ae0bc38d51f64f5568a8f42e8e304eb97faf52cdbd5f2c73a222aa6dd9f"
+      "sha256": "7def5ae0bc38d51f64f5568a8f42e8e304eb97faf52cdbd5f2c73a222aa6dd9f",
+      "contains": [
+        "S1 Keypoint R-CNN source",
+        "S1 checkpoint",
+        "sample lateral radiograph",
+        "sample pseudo-annotation"
+      ]
     }
   },
-  "checkpoints": {
+  "recovered_checkpoints": {
     "vertebra_unet": {
+      "kit_path": "vertebra_unet_finetune/weights/vertebra_unet.pt",
       "bytes": 97881592,
-      "sha256": "b8dcb306e43fb1d13059c07cb4ec89d92d684d3d00444abac8543b9582acf5dd"
+      "sha256": "b8dcb306e43fb1d13059c07cb4ec89d92d684d3d00444abac8543b9582acf5dd",
+      "matches_upstream_lfs_pointer": true
     },
     "hrnet_landmarks": {
+      "kit_path": "hrnet_landmarks_finetune/weights/landmarks_hrnet.pt",
       "bytes": 127887090,
-      "sha256": "aa0f97a7f8dfe478b443ee6e87590185d5cd9278342538e8d4c67f7bdc243df9"
+      "sha256": "aa0f97a7f8dfe478b443ee6e87590185d5cd9278342538e8d4c67f7bdc243df9",
+      "matches_upstream_lfs_pointer": false
     },
     "s1_keypointrcnn": {
+      "kit_path": "s1_finetune/weights/s1_keypointrcnn.pt",
       "bytes": 236574665,
-      "sha256": "04c96dbd53a882d7cd387c0499f0526b23d364da7e7b8ca29ccf0378292130d2"
+      "sha256": "04c96dbd53a882d7cd387c0499f0526b23d364da7e7b8ca29ccf0378292130d2",
+      "matches_upstream_lfs_pointer": false
+    }
+  },
+  "existing_upstream_lfs_pointers": {
+    "backend/weights/vertebra_unet.pt": {
+      "bytes": 97881592,
+      "sha256": "b8dcb306e43fb1d13059c07cb4ec89d92d684d3d00444abac8543b9582acf5dd",
+      "pointer_verified": true,
+      "actual_binary_downloaded": false
+    },
+    "backend/weights/hrnet_landmarks.pt": {
+      "bytes": 127888626,
+      "sha256": "2cc7f791c9a0df3b84515ddb065e52ccff954b8264b4374b4cbdfe8f71870e36",
+      "pointer_verified": true,
+      "actual_binary_downloaded": false
+    },
+    "backend/weights/s1_keypointrcnn.pt": {
+      "bytes": 236592704,
+      "sha256": "2d54fe9f26f2d9bd1f1968b5bfa43c1b6fce5d87aaff8ed495ec5312c7cfc685",
+      "pointer_verified": true,
+      "actual_binary_downloaded": false
+    },
+    "backend/weights/femoral_unet.pt": {
+      "bytes": 97878776,
+      "sha256": "4697c31fb39a7c31ac58e7a75c19e4cefebedb8e0a6fdb82e042e90190108779",
+      "pointer_verified": true,
+      "actual_binary_downloaded": false
     }
   },
   "source_only_bundle": {
     "filename": "recovered_finetune_kits_source_only.tar.gz",
     "bytes": 26894,
     "sha256": "aba797e420bbfc6bb98def2519d473690eadbacca3f2ade18d88ab37e0061629",
-    "files": 27,
-    "python_sources_syntax_compiled": true,
-    "includes_weights": false,
-    "includes_patient_or_example_data": false
+    "file_count": 27,
+    "contains_weights": false,
+    "contains_case_level_data": false,
+    "storage": "Available in the user's ChatGPT Library; not copied into this still-public GitHub fork pending privacy and provenance/licensing review."
+  },
+  "architectures": {
+    "vertebra_unet": "segmentation_models_pytorch U-Net, ResNet-34 encoder, 1 grayscale input, 6 classes (background + L1-L5)",
+    "hrnet_landmarks": "timm HRNet-W32, 1 grayscale input, 22 heatmaps (four corners for each L1-L5 plus two S1 points)",
+    "s1_keypointrcnn": "Torchvision Keypoint R-CNN, ResNet-50 FPN, 2 S1 superior-endplate keypoints",
+    "femoral_upstream": "Existing fork checkpoint pointer at backend/weights/femoral_unet.pt; separate femoral fine-tuning ZIP has not yet been received."
   },
   "exclusions": [
-    "All .pt/.pth checkpoint binaries",
-    "Sample radiograph PNGs",
+    "Patient/sample radiographs",
     "Masks and pseudo-masks",
-    "Annotation JSON and prediction JSON",
-    "Overlays and per-case measurement/statistics files",
-    "Training outputs"
+    "Annotation and prediction JSON containing case-level coordinates",
+    "Overlays and case-level measurements/statistics",
+    "Training outputs and run directories"
   ],
-  "models": {
-    "vertebra_unet": "ResNet-34 U-Net, one grayscale input, six classes (background + L1-L5)",
-    "hrnet_landmarks": "HRNet-W32, 22 heatmaps (four corners per L1-L5 plus two S1 points)",
-    "s1_keypointrcnn": "Torchvision Keypoint R-CNN, ResNet-50 FPN, two S1 keypoints"
+  "validation_performed": {
+    "archive_sha256_and_sizes": "verified",
+    "source_bundle_python_syntax_compilation": "passed",
+    "source_bundle_json_parse": "passed",
+    "source_bundle_identifier_and_secret_scan": "no sample identifier or credential pattern found",
+    "checkpoint_tensor_loading": "not performed",
+    "training_execution": "not performed",
+    "clinical_validation": "not performed"
   },
-  "notes": [
-    "The original archives contain a sample lateral radiograph and case-linked pseudo-labels; the repository is public, so these were not uploaded.",
-    "Weights require private artifact storage or Git LFS; two exceed GitHub's ordinary 100 MB per-file limit.",
-    "Parent repository declares AGPL-3.0; the supplied recovered kits do not include an independent license or complete provenance statement.",
-    "The supplied code bundle is a preservation snapshot, not a validated training pipeline or clinical tool."
+  "license_and_provenance": [
+    "Parent Spine-Contour project declares AGPL-3.0.",
+    "The supplied recovered kits do not include an independent license or complete provenance statement.",
+    "Do not redistribute weights or a derivative model until upstream and kit-specific terms are confirmed."
   ]
 }
