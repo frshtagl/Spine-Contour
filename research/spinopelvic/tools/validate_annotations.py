@@ -98,13 +98,15 @@ def validate_record(record: dict[str, Any], validator: Any) -> list[str]:
                     errors.extend(_polygon_errors(polygon, f"masks.{mask_name}.{field}[{polygon_index}]", width, height))
 
     s1_detection = record.get("s1_detection", {})
-    bbox = s1_detection.get("bbox") if isinstance(s1_detection, dict) else None
-    if bbox is not None:
-        if (not isinstance(bbox, list) or len(bbox) != 4
-                or not all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in bbox)
-                or bbox[0] < 0 or bbox[1] < 0 or bbox[2] > width or bbox[3] > height
-                or bbox[2] <= bbox[0] or bbox[3] <= bbox[1]):
-            errors.append(f"s1_detection.bbox: box {bbox!r} is invalid or outside the {width}x{height} image frame")
+    if isinstance(s1_detection, dict):
+        for field in ("bbox", "model_bbox"):
+            bbox = s1_detection.get(field)
+            if bbox is not None:
+                if (not isinstance(bbox, list) or len(bbox) != 4
+                        or not all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in bbox)
+                        or bbox[0] < 0 or bbox[1] < 0 or bbox[2] > width or bbox[3] > height
+                        or bbox[2] <= bbox[0] or bbox[3] <= bbox[1]):
+                    errors.append(f"s1_detection.{field}: box {bbox!r} is invalid or outside the {width}x{height} image frame")
 
     landmarks = record.get("landmarks", {})
     if isinstance(landmarks, dict):
