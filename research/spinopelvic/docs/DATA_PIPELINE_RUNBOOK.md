@@ -112,6 +112,15 @@ python research/spinopelvic/tools/build_training_inputs.py \
 
 The locked-test output is written under a separate test_reference folder. Never pass it to a training command.
 
+Before using model predictions, run the synthetic framing checks with the parent backend dependencies installed:
+
+~~~bash
+python research/spinopelvic/tools/validate_end_to_end_framing.py
+python research/spinopelvic/tools/validate_synthetic_s1_search.py
+~~~
+
+These scripts use generated synthetic arrays and a deterministic dummy S1 scorer. They check crop/restore geometry and the source locate/search/fixed-point selection path; they do not load the trained S1 detector or establish clinical framing accuracy.
+
 ## 5. Fine-tune the recovered model branches
 
 The source-only bundle contains the recovered U-Net, HRNet and S1 training scripts. Example commands:
