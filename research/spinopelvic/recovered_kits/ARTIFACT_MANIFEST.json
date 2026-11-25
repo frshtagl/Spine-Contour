@@ -1,0 +1,61 @@
+{
+  "received_date": "2026-11-25",
+  "repository_visibility": "public",
+  "preservation_type": "metadata_and_hashes_only_in_GitHub; source_only_bundle_attached_in_chat; original_weights_and_case_data_not_uploaded",
+  "original_archives": {
+    "files (3).zip": {
+      "bytes": 100590618,
+      "sha256": "271f65da6b92b6d13706fdba3ed77e82f8a07bc6f9c5480e2c3f0dc73a3ac4e8"
+    },
+    "files (2).zip": {
+      "bytes": 128607046,
+      "sha256": "22e7af165552c539569fd6983bcb0c531272f8f0110874a60558e8815bebb80c"
+    },
+    "s1_finetune_kit.zip": {
+      "bytes": 224272996,
+      "sha256": "7def5ae0bc38d51f64f5568a8f42e8e304eb97faf52cdbd5f2c73a222aa6dd9f"
+    }
+  },
+  "checkpoints": {
+    "vertebra_unet": {
+      "bytes": 97881592,
+      "sha256": "b8dcb306e43fb1d13059c07cb4ec89d92d684d3d00444abac8543b9582acf5dd"
+    },
+    "hrnet_landmarks": {
+      "bytes": 127887090,
+      "sha256": "aa0f97a7f8dfe478b443ee6e87590185d5cd9278342538e8d4c67f7bdc243df9"
+    },
+    "s1_keypointrcnn": {
+      "bytes": 236574665,
+      "sha256": "04c96dbd53a882d7cd387c0499f0526b23d364da7e7b8ca29ccf0378292130d2"
+    }
+  },
+  "source_only_bundle": {
+    "filename": "recovered_finetune_kits_source_only.tar.gz",
+    "bytes": 26894,
+    "sha256": "aba797e420bbfc6bb98def2519d473690eadbacca3f2ade18d88ab37e0061629",
+    "files": 27,
+    "python_sources_syntax_compiled": true,
+    "includes_weights": false,
+    "includes_patient_or_example_data": false
+  },
+  "exclusions": [
+    "All .pt/.pth checkpoint binaries",
+    "Sample radiograph PNGs",
+    "Masks and pseudo-masks",
+    "Annotation JSON and prediction JSON",
+    "Overlays and per-case measurement/statistics files",
+    "Training outputs"
+  ],
+  "models": {
+    "vertebra_unet": "ResNet-34 U-Net, one grayscale input, six classes (background + L1-L5)",
+    "hrnet_landmarks": "HRNet-W32, 22 heatmaps (four corners per L1-L5 plus two S1 points)",
+    "s1_keypointrcnn": "Torchvision Keypoint R-CNN, ResNet-50 FPN, two S1 keypoints"
+  },
+  "notes": [
+    "The original archives contain a sample lateral radiograph and case-linked pseudo-labels; the repository is public, so these were not uploaded.",
+    "Weights require private artifact storage or Git LFS; two exceed GitHub's ordinary 100 MB per-file limit.",
+    "Parent repository declares AGPL-3.0; the supplied recovered kits do not include an independent license or complete provenance statement.",
+    "The supplied code bundle is a preservation snapshot, not a validated training pipeline or clinical tool."
+  ]
+}
