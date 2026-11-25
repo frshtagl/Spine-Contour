@@ -225,6 +225,7 @@ python research/spinopelvic/tools/normalize_model_predictions.py \
   --hrnet-predictions /secure/spinopelvic/predictions/hrnet/predictions.json \
   --s1-predictions /secure/spinopelvic/predictions/s1/predictions.json \
   --femoral-mask-dir /secure/spinopelvic/predictions/femoral/masks \
+  --femoral-prediction-manifest /secure/spinopelvic/predictions/femoral/prediction_manifest.json \
   --frame-manifest /secure/spinopelvic/framed_model_inputs/frame_manifest_all.json \
   --framed-images /secure/spinopelvic/framed_model_inputs/hrnet/images \
   --model-name HRNet-S1-Femoral \
