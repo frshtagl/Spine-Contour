@@ -33,7 +33,7 @@ def synthetic_s1_scorer(canvases: list[np.ndarray]):
 def main() -> int:
     height, width = 1600, 1200
     image = np.zeros((height, width), dtype=np.uint8)
-    image[1148:1152, 590:611] = 255
+    image[1148:1152, 580:621] = 255
     result = locate(image, synthetic_s1_scorer)
     if result is None:
         raise AssertionError("Synthetic S1 scorer did not produce a framing candidate")
@@ -41,12 +41,12 @@ def main() -> int:
     crop_height, crop_width = bottom - top, right - left
     if not (0 <= left < right <= width and 0 <= top < bottom <= height):
         raise AssertionError(f"Returned window is outside source image: {result['window']}")
-    if not (200 <= crop_height <= 500):
+    if not (500 <= crop_height <= 700):
         raise AssertionError(f"Fixed-point search selected an implausible crop height: {crop_height}")
     if not (left <= 600 <= right and top <= 1150 <= bottom):
         raise AssertionError("Selected crop does not contain the synthetic S1 endplate")
     _, transform = prepare_crop(image, result["window"])
-    source_points = np.asarray([[590.0, 1150.0], [610.0, 1150.0]], dtype=np.float64)
+    source_points = np.asarray([[580.0, 1150.0], [620.0, 1150.0]], dtype=np.float64)
     model_points = source_points.copy()
     model_points[:, 0] = (model_points[:, 0] - left) * transform.inner.scale + transform.inner.left
     model_points[:, 1] = (model_points[:, 1] - top) * transform.inner.scale + transform.inner.top
