@@ -1,19 +1,62 @@
-# Recovered fine-tuning kits
+# Recovered fine-tuning kits and checkpoint provenance
 
-This folder preserves an inventory and cryptographic fingerprints for three user-supplied kits: vertebral U-Net, HRNet landmarks and S1 Keypoint R-CNN.
+This folder is the isolated preservation area for the three user-supplied fine-tuning kits. It is separate from the application implementation under `backend/`.
 
-## Public-repository safety
+## Current repository state
 
-This repository is public. The original ZIPs contained a lateral radiograph, pseudo-masks, annotations, overlays and per-case predictions/measurements. Those case-level materials were deliberately excluded. The three large PyTorch checkpoints were also not uploaded; two exceed GitHub's ordinary 100 MB file limit. Keep original archives and weights in approved private storage and verify them against ARTIFACT_MANIFEST.json.
+- Repository: [frshtagl/Spine-Contour](https://github.com/frshtagl/Spine-Contour)
+- Working branch: `research/spinopelvic-lab`
+- Visibility at last check: **PUBLIC**
+- The upstream application already has model checkpoints tracked through Git LFS under `backend/weights/`.
+- Do not upload recovered weights or any patient-linked data until the repository owner changes visibility to private.
 
-## Source-only code bundle
+## Preserved kits
 
-A sanitized source-only archive was prepared in the conversation as recovered_finetune_kits_source_only.tar.gz (26,894 bytes; SHA-256 aba797e420bbfc6bb98def2519d473690eadbacca3f2ade18d88ab37e0061629). It contains Python scripts, READMEs, requirements and sanitized model metadata, plus a script that extracts only the three checkpoints from the original ZIPs and verifies their hashes. It contains no weights or case-level data. The connected GitHub integration cannot push binary artifacts or Git LFS objects; the archive therefore still needs a manual upload if it should live in this repository.
+| Kit | Architecture | User-supplied checkpoint |
+|---|---|---|
+| Vertebra U-Net | ResNet-34 U-Net, six classes (background + L1-L5) | `vertebra_unet.pt` |
+| HRNet landmarks | HRNet-W32, 22 heatmaps | `landmarks_hrnet.pt` |
+| S1 keypoints | Keypoint R-CNN, ResNet-50 FPN, two keypoints | `s1_keypointrcnn.pt` |
 
-## Models
+The source-only package is currently retained in the user's ChatGPT Library as `recovered_finetune_kits_source_only.tar.gz`. It contains 27 source/configuration/documentation files, no checkpoint binaries, and no sample images or labels. See `SOURCE_BUNDLE_IMPORT.md`.
 
-- Vertebral U-Net: ResNet-34, six classes (background + L1-L5).
-- HRNet landmarks: HRNet-W32, 22 heatmaps.
-- S1 Keypoint R-CNN: ResNet-50 FPN, two S1 keypoints.
+## Important checkpoint comparison
 
-See ARTIFACT_MANIFEST.json for exact archive/checkpoint sizes and SHA-256 hashes. This is preservation metadata, not a claim of clinical validation. The parent project declares AGPL-3.0; the recovered kits' independent licensing/provenance has not been established.
+The supplied U-Net checkpoint exactly matches the existing `backend/weights/vertebra_unet.pt` Git LFS pointer by SHA-256 and size.
+
+The supplied HRNet and S1 checkpoints **do not** match the current fork's LFS pointer objects. Keep them as separate recovered-kit checkpoints. Do not overwrite the upstream baseline paths.
+
+The fork also has an existing femoral U-Net LFS pointer at `backend/weights/femoral_unet.pt`; the separate femoral fine-tuning ZIP has not yet been received.
+
+See `ARTIFACT_MANIFEST.json` for sizes, hashes and exact paths.
+
+## Planned structure
+
+```text
+recovered_kits/
+├── vertebra_unet_finetune/
+│   └── weights/                 # recovered U-Net checkpoint after private switch
+├── hrnet_landmarks_finetune/
+│   └── weights/                 # recovered HRNet checkpoint after private switch
+├── s1_finetune/
+│   └── weights/                 # recovered S1 checkpoint after private switch
+├── femoral/
+│   └── weights/                 # pending femoral kit
+├── source_bundle/               # source-only archive import
+├── provenance/
+└── ARTIFACT_MANIFEST.json
+```
+
+The code/configuration archive will be imported after privacy is changed and its kit-specific provenance/licensing is reviewed. The three weight directories are prepared with LFS rules but no binaries have been added.
+
+## Data protection
+
+The original ZIPs contain a sample lateral radiograph and case-linked masks, annotations, overlays or measurements. Those files are deliberately excluded. A private repository is still not a substitute for institution-approved clinical-data storage. Keep patient images, labels, manifests, and reader measurements in approved secure storage; do not place them in Git or Git LFS.
+
+## Validation status
+
+The source-only package passed Python syntax compilation and JSON parsing. This is not a full execution test: PyTorch checkpoint loading, training, validation and clinical evaluation have not been performed. The recovered scripts are preservation material, not a validated clinical pipeline.
+
+## License
+
+The parent Spine-Contour project declares AGPL-3.0. The recovered kits do not include a separate license or complete provenance statement. Confirm terms before redistributing weights or derivative models.
