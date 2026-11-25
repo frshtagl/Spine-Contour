@@ -106,14 +106,14 @@ python research/spinopelvic/tools/make_source_frames.py \
 
 The cropper calls backend.framing.reframe/fallback_window, saves raw crops (the model scripts then apply their own matching letterbox/preprocessing), rebases HRNet points into crop coordinates, crops vertebral/femoral masks and writes frame_manifest_all.json. This manifest is required to restore cropped predictions to original radiograph coordinates.
 
-Only after the statistical analysis plan and model choices are frozen should the test references be prepared separately:
+Only after the statistical analysis plan and model choices are frozen should the test references be prepared separately. Replace LOCKED_TEST_REFERENCE_READER_CODE with the exact adjudicated test-reference reader code from the annotation manifest:
 
 ~~~
 python research/spinopelvic/tools/build_training_inputs.py \
   --images /secure/spinopelvic/images \
   --annotations /secure/spinopelvic/annotations \
   --splits /secure/spinopelvic/splits/frozen_split_manifest.json \
-  --reader-code R1 \
+  --reader-code LOCKED_TEST_REFERENCE_READER_CODE \
   --out /secure/spinopelvic/model_inputs_test_reference \
   --include-test-reference
 ~~~
