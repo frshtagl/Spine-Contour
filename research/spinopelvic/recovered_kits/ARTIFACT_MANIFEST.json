@@ -5,7 +5,7 @@
     "research_branch": "research/spinopelvic-lab",
     "visibility_at_audit": "public",
     "default_branch": "main",
-    "note": "The connected GitHub integration can read/write repository contents but does not expose a repository-visibility update action. Do not upload recovered checkpoint binaries or case-level data until the owner changes visibility to private."
+    "note": "Repository remains PUBLIC because GitHub does not permit changing visibility for this fork. By user instruction, no recovered checkpoint binaries are re-uploaded or duplicated. This branch contains code/docs/synthetic tests only; case-level data and fine-tuned artifacts remain in approved secure storage."
   },
   "original_archives": {
     "files (3).zip": {
@@ -95,7 +95,7 @@
     "file_count": 27,
     "contains_weights": false,
     "contains_case_level_data": false,
-    "storage": "Available in the user's ChatGPT Library; not copied into this still-public GitHub fork pending privacy and provenance/licensing review."
+    "storage": "Available in the user's ChatGPT Library and local PC. A hash-verifying local importer is committed at research/spinopelvic/tools/import_source_bundle.sh; archive not expanded into individual Git-tracked source files in this pass."
   },
   "architectures": {
     "vertebra_unet": "segmentation_models_pytorch U-Net, ResNet-34 encoder, 1 grayscale input, 6 classes (background + L1-L5)",
