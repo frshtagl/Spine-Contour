@@ -10,12 +10,14 @@ for validation. All images/masks/checkpoints/logs must stay in secure local stor
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import random
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 import cv2
 import numpy as np
@@ -26,6 +28,30 @@ from PIL import Image
 SIZE_CANVAS, SIZE_MODEL, THRESHOLD = 768, 640, 0.35
 MEAN, STD = 0.449, 0.226
 SUFFIXES = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def make_model(encoder_name: str = "resnet34"):
+    import segmentation_models_pytorch as smp
+    return smp.Unet(encoder_name=encoder_name, encoder_weights=None, in_channels=1, classes=1)
+
+
+def checkpoint_state(checkpoint: Any, default_encoder: str = "resnet34") -> tuple[dict, str]:
+    if isinstance(checkpoint, dict):
+        encoder = str(checkpoint.get("encoder", default_encoder))
+        for key in ("model", "model_state_dict", "state_dict"):
+            if isinstance(checkpoint.get(key), dict):
+                return checkpoint[key], encoder
+        if checkpoint and all(isinstance(k, str) for k in checkpoint):
+            return checkpoint, encoder
+    raise ValueError("Checkpoint does not contain a usable state dictionary")
 
 
 def robust_rescale(array: np.ndarray) -> np.ndarray:
@@ -67,7 +93,7 @@ def preprocess(image: np.ndarray, mask: np.ndarray | None = None) -> tuple[np.nd
 def read_gray(path: Path) -> np.ndarray:
     with Image.open(path) as im:
         arr = np.asarray(im)
-    if arr.ndim != 2:
+    if arr.ndim == 3:
         raise ValueError(f"Expected grayscale input, found {arr.shape} in {path.name}")
     return arr
 
@@ -95,10 +121,8 @@ class FemoralDataset(torch.utils.data.Dataset):
             matrix = cv2.getRotationMatrix2D(((SIZE_MODEL - 1) / 2, (SIZE_MODEL - 1) / 2), angle, scale)
             matrix[:, 2] += (tx, ty)
             normalised_black = (0.0 - MEAN) / STD
-            x = cv2.warpAffine(x, matrix, (SIZE_MODEL, SIZE_MODEL), flags=cv2.INTER_LINEAR,
-                               borderMode=cv2.BORDER_CONSTANT, borderValue=float(normalised_black))
-            y = cv2.warpAffine(y, matrix, (SIZE_MODEL, SIZE_MODEL), flags=cv2.INTER_NEAREST,
-                               borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+            x = cv2.warpAffine(x, matrix, (SIZE_MODEL, SIZE_MODEL), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=float(normalised_black))
+            y = cv2.warpAffine(y, matrix, (SIZE_MODEL, SIZE_MODEL), flags=cv2.INTER_NEAREST, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
             x = np.clip(x * random.uniform(0.9, 1.1) + random.uniform(-0.05, 0.05), -2.0, 2.0)
         return torch.from_numpy(x[None].astype(np.float32)), torch.from_numpy(y[None].astype(np.float32))
 
@@ -156,6 +180,8 @@ def main() -> int:
     parser.add_argument("--masks", type=Path, required=True)
     parser.add_argument("--val-names", type=Path, required=True, help="Validation filenames created by build_training_inputs.py")
     parser.add_argument("--checkpoint", type=Path, required=True, help="Existing backend/weights/femoral_unet.pt; never overwrite it")
+    parser.add_argument("--expected-checkpoint-sha256", default=None, help="Optional expected baseline checkpoint hash")
+    parser.add_argument("--encoder", default="resnet34", help="Encoder name when the checkpoint has no metadata")
     parser.add_argument("--out", type=Path, required=True, help="Secure output directory outside Git")
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--batch-size", type=int, default=4)
@@ -169,39 +195,37 @@ def main() -> int:
     args = parser.parse_args()
     try:
         if not args.allow_in_repo:
-            root = Path(__file__).resolve().parents[3].resolve()
-            out = args.out.expanduser().resolve()
-            try:
-                out.relative_to(root)
-            except ValueError:
-                pass
-            else:
-                raise ValueError(f"Refusing to write model weights/logs inside Git repository: {out}")
+            root = Path(__file__).resolve().parents[3].resolve(); out = args.out.expanduser().resolve()
+            try: out.relative_to(root)
+            except ValueError: pass
+            else: raise ValueError(f"Refusing to write model weights/logs inside Git repository: {out}")
         if args.out.exists() and any(args.out.iterdir()):
             raise FileExistsError(f"Run directory is not empty: {args.out}; use a new run directory")
-        if args.epochs < 1 or args.batch_size < 1 or args.lr <= 0:
-            raise ValueError("epochs, batch-size and learning rate must be positive")
-        random.seed(args.seed)
-        np.random.seed(args.seed)
-        torch.manual_seed(args.seed)
-        if torch.cuda.is_available():
-            torch.cuda.manual_seed_all(args.seed)
+        if args.epochs < 1 or args.batch_size < 1 or args.lr <= 0 or args.max_steps < 0 or args.workers < 0:
+            raise ValueError("epochs, batch-size and learning rate must be positive; max-steps/workers must be non-negative")
+        random.seed(args.seed); np.random.seed(args.seed); torch.manual_seed(args.seed)
+        if torch.cuda.is_available(): torch.cuda.manual_seed_all(args.seed)
         names = sorted(p.name for p in args.images.iterdir() if p.is_file() and p.suffix.lower() in SUFFIXES
                        and (args.masks / f"{p.stem}.png").is_file())
         val_names = {line.strip() for line in args.val_names.read_text(encoding="utf-8").splitlines() if line.strip()}
         unknown = val_names - set(names)
-        if unknown:
-            raise ValueError(f"Validation list contains files without masks: {sorted(unknown)[:5]}")
+        if unknown: raise ValueError(f"Validation list contains files without masks: {sorted(unknown)[:5]}")
         train_names = [n for n in names if n not in val_names]
-        if not train_names or not val_names:
-            raise ValueError("Both training and validation sets must contain at least one labelled image")
+        if not train_names or not val_names: raise ValueError("Both training and validation sets must contain at least one labelled image")
+        def positive_count(selected: list[str]) -> int:
+            return sum(int(np.asarray(Image.open(args.masks / f"{Path(name).stem}.png"), dtype=np.uint8).any()) for name in selected)
+        train_positive_count = positive_count(train_names)
+        val_positive_count = positive_count(sorted(val_names))
+        if train_positive_count == 0 or val_positive_count == 0:
+            raise ValueError("Femoral fine-tuning requires positive-reference masks in both train and validation splits; empty masks remain useful negatives but cannot be the only examples")
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        import segmentation_models_pytorch as smp
+        checkpoint_sha256 = sha256_file(args.checkpoint)
+        if args.expected_checkpoint_sha256 and checkpoint_sha256.lower() != args.expected_checkpoint_sha256.lower():
+            raise ValueError(f"Checkpoint SHA-256 mismatch: expected {args.expected_checkpoint_sha256}, got {checkpoint_sha256}")
         checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=True)
-        if not isinstance(checkpoint, dict) or "model" not in checkpoint:
-            raise ValueError("Checkpoint must contain a model state dictionary")
-        model = smp.Unet(encoder_name=str(checkpoint.get("encoder", "resnet34")), encoder_weights=None, in_channels=1, classes=1)
-        model.load_state_dict(checkpoint["model"], strict=True)
+        state, encoder = checkpoint_state(checkpoint, args.encoder)
+        model = make_model(encoder)
+        model.load_state_dict(state, strict=True)
         model.to(device)
         train_loader = torch.utils.data.DataLoader(FemoralDataset(train_names, args.images, args.masks, True),
             batch_size=args.batch_size, shuffle=True, num_workers=args.workers, drop_last=False)
@@ -211,47 +235,50 @@ def main() -> int:
         args.out.mkdir(parents=True, exist_ok=True)
         baseline = validate(model, val_loader, device, True)
         log = [{"phase": "baseline", "metrics": baseline}]
-        best = -1.0
-        step = 0
-        total_steps = max(1, args.epochs * len(train_loader))
+        best = -1.0; step = 0; total_steps = max(1, args.epochs * len(train_loader))
         for epoch in range(1, args.epochs + 1):
-            model.train()
-            epoch_loss = []
+            model.train(); epoch_loss = []
             started = time.time()
             for x, y in train_loader:
                 x, y = x.to(device), y.to(device)
                 warm = min(1.0, (step + 1) / 30.0)
                 cosine = 0.5 * (1.0 + math.cos(math.pi * min(step, total_steps) / total_steps))
-                for group in optimizer.param_groups:
-                    group["lr"] = args.lr * warm * cosine
+                for group in optimizer.param_groups: group["lr"] = args.lr * warm * cosine
                 logits = model(x)
                 loss = F.binary_cross_entropy_with_logits(logits, y) + args.dice_weight * soft_dice_loss(logits, y)
-                optimizer.zero_grad(set_to_none=True)
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)
-                optimizer.step()
-                epoch_loss.append(float(loss.detach().cpu()))
-                step += 1
-                if args.max_steps and step >= args.max_steps:
-                    break
+                optimizer.zero_grad(set_to_none=True); loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0); optimizer.step()
+                epoch_loss.append(float(loss.detach().cpu())); step += 1
+                if args.max_steps and step >= args.max_steps: break
             metrics = validate(model, val_loader, device, True)
             record = {"epoch": epoch, "train_loss": float(np.mean(epoch_loss)) if epoch_loss else None,
                       "validation": metrics, "seconds": round(time.time() - started, 1)}
             log.append(record)
-            payload = {"model": model.state_dict(), "encoder": "resnet34", "classes": 1,
+            payload = {"model": model.state_dict(), "encoder": encoder, "classes": 1,
                        "input_size": SIZE_MODEL, "threshold": THRESHOLD, "epoch": epoch,
                        "validation": metrics, "config": {"seed": args.seed, "lr": args.lr,
                        "weight_decay": args.weight_decay, "dice_weight": args.dice_weight,
                        "preprocessing": "robust_rescale+CLAHE2x8x8+letterbox768+resize640+gray_norm"}}
             torch.save(payload, args.out / "last.pt")
             if metrics["positive_dice"] is not None and metrics["positive_dice"] > best:
-                best = metrics["positive_dice"]
-                torch.save(payload, args.out / "best.pt")
+                best = metrics["positive_dice"]; torch.save(payload, args.out / "best.pt")
             (args.out / "training_log.json").write_text(json.dumps(log, indent=2) + "\n", encoding="utf-8")
             print(json.dumps(record), flush=True)
-            if args.max_steps and step >= args.max_steps:
-                break
-        print(json.dumps({"baseline": baseline, "best_validation_positive_dice": best, "output": str(args.out)}, indent=2))
+            if args.max_steps and step >= args.max_steps: break
+        run_manifest = {
+            "checkpoint_path": str(args.checkpoint), "checkpoint_sha256": checkpoint_sha256,
+            "checkpoint_bytes": args.checkpoint.stat().st_size, "encoder": encoder,
+            "seed": args.seed, "epochs_requested": args.epochs, "steps_completed": step,
+            "train_positive_mask_count": train_positive_count, "validation_positive_mask_count": val_positive_count,
+            "train_names_sha256": hashlib.sha256("\n".join(train_names).encode()).hexdigest(),
+            "validation_names_sha256": hashlib.sha256("\n".join(sorted(val_names)).encode()).hexdigest(),
+            "preprocessing": "robust_rescale+CLAHE2x8x8+letterbox768+resize640+gray_norm",
+            "threshold": THRESHOLD, "baseline_validation": baseline,
+            "best_validation_positive_dice": best,
+            "note": "New explicit fine-tuning recipe; not the undisclosed original training procedure.",
+        }
+        (args.out / "run_manifest.json").write_text(json.dumps(run_manifest, indent=2) + "\n", encoding="utf-8")
+        print(json.dumps({"baseline": baseline, "best_validation_positive_dice": best, "checkpoint_sha256": checkpoint_sha256, "output": str(args.out)}, indent=2))
     except Exception as exc:
         print(f"ERROR: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 2
